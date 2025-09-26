@@ -1,0 +1,96 @@
+{
+  "name": "@roleplayx/engine-framework",
+  "version": "0.1.26",
+  "description": "RoleplayX Engine Framework",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "homepage": "https://roleplayx.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/roleplay-x/engine-framework"
+  },
+  "bugs": {
+    "url": "https://github.com/roleplay-x/engine-framework/issues"
+  },
+  "keywords": [
+    "roleplay"
+  ],
+  "scripts": {
+    "gen:barrels": "node scripts/generate-barrels.js",
+    "lint": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,json,md}'",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "author": "roleplayx",
+  "license": "ISC",
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": "^22.0.0"
+  },
+  "dependencies": {
+    "@roleplayx/engine-sdk": "^0.1.23",
+    "@fastify/cors": "^11.1.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "emittery": "^1.2.0",
+    "fastify": "^5.4.0",
+    "json-logic-js": "^2.0.5",
+    "reflect-metadata": "^0.2.2",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.js"
+    },
+    "./server": {
+      "types": "./server/index.d.ts",
+      "import": "./server/index.js",
+      "require": "./server/index.js"
+    },
+    "./client": {
+      "types": "./client/index.d.ts",
+      "import": "./client/index.js",
+      "require": "./client/index.js"
+    },
+    "./shared": {
+      "types": "./shared/index.d.ts",
+      "import": "./shared/index.js",
+      "require": "./shared/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.31.0",
+    "@types/jest": "^30.0.0",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/nock": "^11.1.0",
+    "@types/node": "^24.0.13",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "babel-jest": "^30.0.5",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.1",
+    "globals": "^16.3.0",
+    "jest": "^30.0.4",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0",
+    "typescript-json-schema": "^0.65.1"
+  }
+}
