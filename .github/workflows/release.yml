@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out your code
+      - uses: actions/checkout@v4
+
+      # 2. Set up Node.js and NPM auth
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@roleplayx'
+
+      # 3. Install dependencies
+      - run: npm ci
+
+      # 4. Generate barrels
+      - run: npm run gen:barrels
+
+      # 5. Build (emit JS + d.ts into dist/)
+      - run: npm run build
+
+      # 6. Run tests
+      - run: npm test
+
+      # 7) Figure out which npm dist‐tag to use
+      - name: Decide npm tag
+        id: dist_tag
+        run: |
+          # strip the "refs/tags/" prefix
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "Version is $VERSION"
+          if [[ "$VERSION" == *-* ]]; then
+          # any hyphen in semver → prerelease
+          echo "tag=next" >> $GITHUB_OUTPUT
+          else
+          echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # 8) Copy package.json into dist
+      - name: Copy package.json into dist
+        run: cp package.json dist/
+
+      # 9) Publish to npm under the chosen tag
+      - name: Publish to npm
+        run: npm publish ./dist --tag ${{ steps.dist_tag.outputs.tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
