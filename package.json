@@ -1,6 +1,6 @@
 {
   "name": "@roleplayx/engine-framework",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "RoleplayX Engine Framework",
   "main": "index.js",
   "types": "index.d.ts",

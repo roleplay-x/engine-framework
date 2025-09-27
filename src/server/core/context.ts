@@ -8,6 +8,7 @@ import { RPServerEvents } from './events/events';
 import { RPServerHooks } from './hooks/hooks';
 import { RPServerService } from './server-service';
 import { CustomServerContextOptions, IServiceContext } from './types';
+import { PlatformAdapter } from '../natives/adapters/base/platform.adapter';
 
 /** Configuration options for creating a server context */
 export interface RPServerContextOptions<
@@ -22,6 +23,8 @@ export interface RPServerContextOptions<
   hookBus: RPHookBus<THooks>;
   /** Logger instance */
   logger: RPLogger;
+  /** Platform adapter for the server */
+  platformAdapter: PlatformAdapter;
 }
 
 /** Constructor type for server context implementations */
@@ -111,6 +114,8 @@ export class RPServerContext<
   public readonly hookBus: RPHookBus<THooks>;
   /** Custom options of the context */
   public readonly customOptions: TOptions;
+  /** Platform adapter for the server */
+  public readonly platformAdapter: PlatformAdapter;
 
   /**
    * Creates a new server context with the provided infrastructure.
@@ -132,6 +137,8 @@ export class RPServerContext<
         this.eventEmitter.emit('eventEmitterError', { error, event, payload });
       }
     });
+
+    this.platformAdapter = options.platformAdapter;
   }
 
   /**

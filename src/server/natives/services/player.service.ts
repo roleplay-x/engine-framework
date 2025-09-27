@@ -20,18 +20,19 @@ import {
 import { ServerTypes } from '../../core/types';
 
 import { RPSpawnService } from './spawn.service';
+import { PlayerId } from '../../domains/session/models/session';
 
 export abstract class RPPlayerService<
   T extends ServerTypes = ServerTypes,
 > extends RPServerService<T> {
   // OnClient methods (client events)
-  abstract handleClientReady(playerId: string): Promise<void>;
+  abstract handleClientReady(playerId: PlayerId): Promise<void>;
 
-  abstract handleClientDied(playerId: string, payload: ClientPlayerDiedPayload): void;
+  abstract handleClientDied(playerId: PlayerId, payload: ClientPlayerDiedPayload): void;
 
-  abstract handleSpawnRequest(playerId: string, payload: ClientSpawnRequestPayload): void;
+  abstract handleSpawnRequest(playerId: PlayerId, payload: ClientSpawnRequestPayload): void;
 
-  abstract handleSpawnFailed(playerId: string, payload: ClientSpawnFailedPayload): void;
+  abstract handleSpawnFailed(playerId: PlayerId, payload: ClientSpawnFailedPayload): void;
 
   // OnServer methods (server events with payloads)
   abstract onPlayerConnecting(payload: RPPlayerConnecting): Promise<void>;
@@ -55,7 +56,7 @@ export abstract class RPPlayerService<
   abstract onPlayerSpawnRequested(payload: RPSpawnRequest): Promise<void>;
 
   // Utility methods
-  abstract getPlayer(id: string): ServerPlayer;
+  abstract getPlayer(id: PlayerId): ServerPlayer;
 
   abstract getSpawnManager(): RPSpawnService;
 }
