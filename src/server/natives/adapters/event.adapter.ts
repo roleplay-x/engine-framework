@@ -1,4 +1,4 @@
-import { PlayerId } from '../../../domains/session/models/session';
+import { PlayerId } from '../../domains/session/models/session';
 
 export interface IEventAdapter {
   initializeEvents(): void;

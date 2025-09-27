@@ -8,7 +8,7 @@ import { RPServerEvents } from './events/events';
 import { RPServerHooks } from './hooks/hooks';
 import { RPServerService } from './server-service';
 import { CustomServerContextOptions, IServiceContext } from './types';
-import { PlatformAdapter } from '../natives/adapters/base/platform.adapter';
+import { PlatformAdapter } from '../natives/adapters';
 
 /** Configuration options for creating a server context */
 export interface RPServerContextOptions<

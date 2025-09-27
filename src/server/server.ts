@@ -19,6 +19,7 @@ import { ApiControllerCtor, ApiServer, ApiServerConfig } from './api';
 import { AccountController } from './domains/account/api.controller';
 import { HealthController } from './api/controllers/health.controller';
 import { SessionController } from './domains/session/api.controller';
+import { PlatformAdapter } from './natives/adapters';
 
 /** Configuration options for creating a roleplay server instance */
 export interface RPServerOptions {
@@ -119,7 +120,7 @@ export class RPServer {
    * @param options - Server configuration options
    * @param natives - Native integrations and adapters
    */
-  private constructor(options: RPServerOptions, natives: RPServerNatives) {
+  private constructor(options: RPServerOptions, natives: RPServerNatives, platformAdapter: PlatformAdapter) {
     const logger = options.logger ?? defaultLogger;
     const engineClient = new EngineClient(
       {
@@ -151,7 +152,9 @@ export class RPServer {
       eventEmitter,
       hookBus,
       logger,
+      platformAdapter,
       ...natives?.customContext?.options,
+
     };
 
     this.context = RPServerContext.create(contextType, contextOptions);
@@ -197,8 +200,8 @@ export class RPServer {
     TOptions extends CustomServerContextOptions = CustomServerContextOptions,
     TEvents extends RPServerEvents = RPServerEvents,
     THooks extends RPServerHooks = RPServerHooks,
-  >(config: RPServerOptions, natives: RPServerNatives<TOptions, TEvents, THooks>): RPServer {
-    this.instance = new RPServer(config, natives as RPServerNatives);
+  >(config: RPServerOptions, natives: RPServerNatives<TOptions, TEvents, THooks>, platformAdapter: PlatformAdapter): RPServer {
+    this.instance = new RPServer(config, natives as RPServerNatives, platformAdapter);
     return this.instance;
   }
 
