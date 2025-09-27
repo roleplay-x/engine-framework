@@ -4,3 +4,7 @@
  */
 
 export * from './core/entities/player';
+export * from './natives';
+export * from './natives/events';
+export * from './core';
+export * from './domains';
