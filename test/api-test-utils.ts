@@ -12,6 +12,7 @@ import {
 import { RPEventEmitter } from '../src/core/bus/event-emitter';
 import { RPHookBus } from '../src/core/bus/hook-bus';
 import { defaultLogger } from '../src/core/logger';
+import { PlatformAdapter } from '../src/server/natives/adapters/platform.adapter';
 
 /**
  * Test utilities for API controller testing
@@ -25,12 +26,14 @@ export class ApiTestServer {
     const mockEngineClient = {} as EngineClient;
     const eventEmitter = new RPEventEmitter<RPServerEvents>();
     const hookBus = new RPHookBus<RPServerHooks>();
+    const mockPlatformAdapter = {} as PlatformAdapter;
 
     const contextOptions: RPServerContextOptions = {
       engineClient: mockEngineClient,
       eventEmitter,
       hookBus,
       logger: defaultLogger,
+      platformAdapter: mockPlatformAdapter,
     };
 
     this.context = new RPServerContext(contextOptions);

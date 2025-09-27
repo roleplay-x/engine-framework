@@ -10,6 +10,7 @@ import { RPServerContext, RPServerContextOptions } from '../context';
 import { CustomServerContextOptions, ServerTypes } from '../types';
 import { RPServerService } from '../server-service';
 import { RPServerHooks } from '../hooks/hooks';
+import { PlatformAdapter } from '../../natives/adapters/platform.adapter';
 
 import { RPServerEvents } from './events';
 import { getEventHandlers, OnServer } from './decorators';
@@ -297,10 +298,44 @@ class BaseEventService extends RPServerService {
 describe('Custom Events and Hooks Support', () => {
   let mockLogger: MockLogger;
   let mockEngineClient: MockEngineClient;
+  let mockPlatformAdapter: jest.Mocked<PlatformAdapter>;
 
   beforeEach(() => {
     mockLogger = new MockLogger();
     mockEngineClient = new MockEngineClient();
+    mockPlatformAdapter = {
+      player: {
+        getPlayerId: jest.fn().mockReturnValue(1),
+        getCurrentPlayerId: jest.fn().mockReturnValue(1),
+        getPlayerName: jest.fn().mockReturnValue('TestPlayer'),
+        getPlayerIP: jest.fn().mockReturnValue('127.0.0.1'),
+        kickPlayer: jest.fn(),
+        getPlayerPosition: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+        setPlayerPosition: jest.fn(),
+        getPlayerHealth: jest.fn().mockReturnValue(100),
+      },
+      events: {
+        initializeEvents: jest.fn(),
+        onPlayerJoin: jest.fn(),
+        onPlayerLeave: jest.fn(),
+        onPlayerDeath: jest.fn(),
+        onPlayerSpawn: jest.fn(),
+        onPlayerReady: jest.fn(),
+      },
+      network: {
+        emitToPlayer: jest.fn(),
+        emitToAll: jest.fn(),
+        onClientEvent: jest.fn(),
+        emitToClient: jest.fn(),
+        broadcastToClients: jest.fn(),
+      },
+      core: {
+        getMaxPlayers: jest.fn().mockReturnValue(100),
+        getPlayerCount: jest.fn().mockReturnValue(0),
+        log: jest.fn(),
+      },
+      setEventEmitter: jest.fn(),
+    } as unknown as jest.Mocked<PlatformAdapter>;
   });
 
   describe('Custom Game Server Context', () => {
@@ -319,6 +354,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: gameEventEmitter,
         hookBus: gameHookBus,
+        platformAdapter: mockPlatformAdapter,
         gameConfig: {
           maxPlayers: 32,
           mapName: 'TestWorld',
@@ -470,6 +506,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: racingEventEmitter,
         hookBus: racingHookBus,
+        platformAdapter: mockPlatformAdapter,
         raceConfig: {
           trackName: 'Monaco',
           maxLaps: 10,
@@ -563,6 +600,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: baseEventEmitter,
         hookBus: baseHookBus,
+        platformAdapter: mockPlatformAdapter,
       };
 
       baseContext = new RPServerContext(contextOptions);
@@ -626,6 +664,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: gameEventEmitter,
         hookBus: gameHookBus,
+        platformAdapter: mockPlatformAdapter,
         gameConfig: {
           maxPlayers: 16,
           mapName: 'TestMap',
@@ -682,6 +721,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: baseEventEmitter,
         hookBus: baseHookBus,
+        platformAdapter: mockPlatformAdapter,
       };
 
       const baseContext = new RPServerContext(contextOptions);
@@ -711,6 +751,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: gameEventEmitter,
         hookBus: gameHookBus,
+        platformAdapter: mockPlatformAdapter,
         gameConfig: {
           maxPlayers: 20,
           mapName: 'IntegrationTest',
@@ -730,6 +771,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: racingEventEmitter,
         hookBus: racingHookBus,
+        platformAdapter: mockPlatformAdapter,
         raceConfig: {
           trackName: 'IntegrationTrack',
           maxLaps: 5,
@@ -800,6 +842,7 @@ describe('Custom Events and Hooks Support', () => {
         engineClient: mockEngineClient as unknown as EngineClient,
         eventEmitter: gameEventEmitter,
         hookBus: gameHookBus,
+        platformAdapter: mockPlatformAdapter,
         gameConfig: {
           maxPlayers: 8,
           mapName: 'AsyncTest',

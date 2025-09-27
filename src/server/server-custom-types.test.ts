@@ -12,6 +12,7 @@ import { RPServerService } from './core/server-service';
 import { OnServer } from './core/events/decorators';
 import { RPServerEvents } from './core/events/events';
 import { RPServerHooks } from './core/hooks/hooks';
+import { PlatformAdapter } from './natives/adapters/platform.adapter';
 
 // Mock only EngineClient for these tests
 jest.mock('@roleplayx/engine-sdk');
@@ -205,12 +206,47 @@ class GameManagementService extends RPServerService<GameServerTypes> {
 describe('RPServer Custom Types Integration', () => {
   let mockLogger: MockLogger;
   let mockEngineClient: jest.Mocked<EngineClient>;
+  let mockPlatformAdapter: jest.Mocked<PlatformAdapter>;
 
   beforeEach(() => {
     mockLogger = new MockLogger();
     mockEngineClient = {
       getEngineApi: jest.fn(),
     } as unknown as jest.Mocked<EngineClient>;
+
+    mockPlatformAdapter = {
+      player: {
+        getPlayerId: jest.fn().mockReturnValue(1),
+        getCurrentPlayerId: jest.fn().mockReturnValue(1),
+        getPlayerName: jest.fn().mockReturnValue('TestPlayer'),
+        getPlayerIP: jest.fn().mockReturnValue('127.0.0.1'),
+        kickPlayer: jest.fn(),
+        getPlayerPosition: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+        setPlayerPosition: jest.fn(),
+        getPlayerHealth: jest.fn().mockReturnValue(100),
+      },
+      events: {
+        initializeEvents: jest.fn(),
+        onPlayerJoin: jest.fn(),
+        onPlayerLeave: jest.fn(),
+        onPlayerDeath: jest.fn(),
+        onPlayerSpawn: jest.fn(),
+        onPlayerReady: jest.fn(),
+      },
+      network: {
+        emitToPlayer: jest.fn(),
+        emitToAll: jest.fn(),
+        onClientEvent: jest.fn(),
+        emitToClient: jest.fn(),
+        broadcastToClients: jest.fn(),
+      },
+      core: {
+        getMaxPlayers: jest.fn().mockReturnValue(100),
+        getPlayerCount: jest.fn().mockReturnValue(0),
+        log: jest.fn(),
+      },
+      setEventEmitter: jest.fn(),
+    } as unknown as jest.Mocked<PlatformAdapter>;
 
     (EngineClient as jest.Mock).mockImplementation(() => mockEngineClient);
   });
@@ -243,6 +279,7 @@ describe('RPServer Custom Types Integration', () => {
       eventEmitter: new RPEventEmitter<GameServerEvents>(),
       hookBus: new RPHookBus<GameServerHooks>(),
       logger: mockLogger,
+      platformAdapter: mockPlatformAdapter,
       ...customOptions,
     });
 
@@ -277,6 +314,7 @@ describe('RPServer Custom Types Integration', () => {
       eventEmitter: new RPEventEmitter<GameServerEvents>(),
       hookBus: new RPHookBus<GameServerHooks>(),
       logger: mockLogger,
+      platformAdapter: mockPlatformAdapter,
       ...customOptions,
     });
 
@@ -310,6 +348,7 @@ describe('RPServer Custom Types Integration', () => {
       eventEmitter,
       hookBus: new RPHookBus<GameServerHooks>(),
       logger: mockLogger,
+      platformAdapter: mockPlatformAdapter,
       ...customOptions,
     });
 
@@ -363,6 +402,7 @@ describe('RPServer Custom Types Integration', () => {
       eventEmitter: new RPEventEmitter<GameServerEvents>(),
       hookBus,
       logger: mockLogger,
+      platformAdapter: mockPlatformAdapter,
       ...customOptions,
     });
 
@@ -431,6 +471,7 @@ describe('RPServer Custom Types Integration', () => {
       eventEmitter,
       hookBus,
       logger: mockLogger,
+      platformAdapter: mockPlatformAdapter,
       ...customOptions,
     });
 

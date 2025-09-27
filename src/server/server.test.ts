@@ -16,12 +16,14 @@ import { ConfigurationService } from './domains/configuration/service';
 import { LocalizationService } from './domains/localization/service';
 import { ReferenceService } from './domains/reference/service';
 import { ApiServer } from './api';
+import { PlatformAdapter } from './natives/adapters/platform.adapter';
 
 // Mock external dependencies
 jest.mock('@roleplayx/engine-sdk');
 jest.mock('./socket/socket');
 jest.mock('./core/context');
 jest.mock('./api/api-server');
+jest.mock('./natives/adapters/platform.adapter');
 
 describe('RPServer', () => {
   let mockLogger: MockLogger;
@@ -29,6 +31,7 @@ describe('RPServer', () => {
   let mockContext: jest.Mocked<RPServerContext>;
   let mockEngineClient: jest.Mocked<EngineClient>;
   let mockApiServer: jest.Mocked<ApiServer>;
+  let mockPlatformAdapter: jest.Mocked<PlatformAdapter>;
 
   const testServerOptions: RPServerOptions = {
     serverId: 'test-server',
@@ -50,6 +53,39 @@ describe('RPServer', () => {
     (RPServer as unknown as { instance: RPServer | undefined }).instance = undefined;
 
     mockLogger = new MockLogger();
+    mockPlatformAdapter = {
+      player: {
+        getPlayerId: jest.fn().mockReturnValue(1),
+        getCurrentPlayerId: jest.fn().mockReturnValue(1),
+        getPlayerName: jest.fn().mockReturnValue('TestPlayer'),
+        getPlayerIP: jest.fn().mockReturnValue('127.0.0.1'),
+        kickPlayer: jest.fn(),
+        getPlayerPosition: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+        setPlayerPosition: jest.fn(),
+        getPlayerHealth: jest.fn().mockReturnValue(100),
+      },
+      events: {
+        initializeEvents: jest.fn(),
+        onPlayerJoin: jest.fn(),
+        onPlayerLeave: jest.fn(),
+        onPlayerDeath: jest.fn(),
+        onPlayerSpawn: jest.fn(),
+        onPlayerReady: jest.fn(),
+      },
+      network: {
+        emitToPlayer: jest.fn(),
+        emitToAll: jest.fn(),
+        onClientEvent: jest.fn(),
+        emitToClient: jest.fn(),
+        broadcastToClients: jest.fn(),
+      },
+      core: {
+        getMaxPlayers: jest.fn().mockReturnValue(100),
+        getPlayerCount: jest.fn().mockReturnValue(0),
+        log: jest.fn(),
+      },
+      setEventEmitter: jest.fn(),
+    } as unknown as jest.Mocked<PlatformAdapter>;
 
     // Setup mocks
     mockEngineClient = {
@@ -97,7 +133,7 @@ describe('RPServer', () => {
 
   describe('create', () => {
     it('should create a new server instance with default logger', () => {
-      const server = RPServer.create(testServerOptions, testNatives);
+      const server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
       expect(server).toBeInstanceOf(RPServer);
       expect(EngineClient).toHaveBeenCalledWith(
@@ -115,7 +151,7 @@ describe('RPServer', () => {
       const customLogger = new MockLogger();
       const optionsWithLogger = { ...testServerOptions, logger: customLogger };
 
-      const server = RPServer.create(optionsWithLogger, testNatives);
+      const server = RPServer.create(optionsWithLogger, testNatives, mockPlatformAdapter);
 
       expect(server).toBeInstanceOf(RPServer);
       expect(EngineSocket).toHaveBeenCalledWith(
@@ -142,7 +178,7 @@ describe('RPServer', () => {
         },
       };
 
-      RPServer.create(testServerOptions, nativesWithCustomContext);
+      RPServer.create(testServerOptions, nativesWithCustomContext, mockPlatformAdapter);
 
       expect(RPServerContext.create).toHaveBeenCalledWith(
         CustomContext,
@@ -154,7 +190,7 @@ describe('RPServer', () => {
     });
 
     it('should register all core services in correct order', () => {
-      RPServer.create(testServerOptions, testNatives);
+      RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
       expect(mockContext.addService).toHaveBeenCalledTimes(6);
       expect(mockContext.addService).toHaveBeenNthCalledWith(1, ConfigurationService);
@@ -166,8 +202,8 @@ describe('RPServer', () => {
     });
 
     it('should replace previous instance when called multiple times', () => {
-      const server1 = RPServer.create(testServerOptions, testNatives);
-      const server2 = RPServer.create(testServerOptions, testNatives);
+      const server1 = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
+      const server2 = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
       expect(server1).not.toBe(server2);
       expect(RPServer.get()).toBe(server2);
@@ -176,7 +212,7 @@ describe('RPServer', () => {
 
   describe('get', () => {
     it('should return the singleton instance after creation', () => {
-      const server = RPServer.create(testServerOptions, testNatives);
+      const server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
       const retrievedServer = RPServer.get();
 
       expect(retrievedServer).toBe(server);
@@ -193,7 +229,7 @@ describe('RPServer', () => {
     let server: RPServer;
 
     beforeEach(() => {
-      server = RPServer.create(testServerOptions, testNatives);
+      server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
     });
 
     it('should start socket and initialize context', async () => {
@@ -246,7 +282,7 @@ describe('RPServer', () => {
     let server: RPServer;
 
     beforeEach(() => {
-      server = RPServer.create(testServerOptions, testNatives);
+      server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
     });
 
     it('should return the server context', () => {
@@ -266,7 +302,7 @@ describe('RPServer', () => {
     let server: RPServer;
 
     beforeEach(() => {
-      server = RPServer.create(testServerOptions, testNatives);
+      server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
     });
 
     it('should dispose context and close socket gracefully', async () => {
@@ -300,7 +336,7 @@ describe('RPServer', () => {
     let server: RPServer;
 
     beforeEach(() => {
-      server = RPServer.create(testServerOptions, testNatives);
+      server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
     });
 
     it('should register shutdown signal handlers after start', async () => {
@@ -331,7 +367,7 @@ describe('RPServer', () => {
     });
 
     it('should handle graceful shutdown sequence correctly', async () => {
-      const server = RPServer.create(testServerOptions, testNatives);
+      const server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
       const mockStop = jest.spyOn(server, 'stop').mockResolvedValue();
 
       await server.start();
@@ -351,7 +387,7 @@ describe('RPServer', () => {
 
   describe('integration scenarios', () => {
     it('should support complete server lifecycle', async () => {
-      const server = RPServer.create(testServerOptions, testNatives);
+      const server = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
       // Start server
       await server.start();
@@ -369,9 +405,9 @@ describe('RPServer', () => {
     });
 
     it('should maintain singleton behavior across multiple operations', () => {
-      const server1 = RPServer.create(testServerOptions, testNatives);
+      const server1 = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
       const server2 = RPServer.get();
-      const server3 = RPServer.create(testServerOptions, testNatives);
+      const server3 = RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
       const server4 = RPServer.get();
 
       expect(server1).toBe(server2);
@@ -380,7 +416,7 @@ describe('RPServer', () => {
     });
 
     it('should handle service registration chain properly', () => {
-      RPServer.create(testServerOptions, testNatives);
+      RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
       // Verify services are added in dependency order
       const serviceOrder = [
@@ -405,7 +441,7 @@ describe('RPServer', () => {
         throw new Error('EngineClient creation failed');
       });
 
-      expect(() => RPServer.create(testServerOptions, testNatives)).toThrow(
+      expect(() => RPServer.create(testServerOptions, testNatives, mockPlatformAdapter)).toThrow(
         'EngineClient creation failed',
       );
     });
@@ -415,7 +451,7 @@ describe('RPServer', () => {
         throw new Error('EngineSocket creation failed');
       });
 
-      expect(() => RPServer.create(testServerOptions, testNatives)).toThrow(
+      expect(() => RPServer.create(testServerOptions, testNatives, mockPlatformAdapter)).toThrow(
         'EngineSocket creation failed',
       );
     });
@@ -425,7 +461,7 @@ describe('RPServer', () => {
         throw new Error('Context creation failed');
       });
 
-      expect(() => RPServer.create(testServerOptions, testNatives)).toThrow(
+      expect(() => RPServer.create(testServerOptions, testNatives, mockPlatformAdapter)).toThrow(
         'Context creation failed',
       );
     });
@@ -435,7 +471,7 @@ describe('RPServer', () => {
         throw new Error('Service registration failed');
       });
 
-      expect(() => RPServer.create(testServerOptions, testNatives)).toThrow(
+      expect(() => RPServer.create(testServerOptions, testNatives, mockPlatformAdapter)).toThrow(
         'Service registration failed',
       );
     });

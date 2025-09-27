@@ -12,6 +12,7 @@ import { CustomServerContextOptions, ServerTypes } from './types';
 import { RPServerService } from './server-service';
 import { RPServerEvents } from './events/events';
 import { RPServerHooks } from './hooks/hooks';
+import { PlatformAdapter } from '../natives/adapters/platform.adapter';
 
 // Test service implementations
 class TestService extends RPServerService {
@@ -158,6 +159,7 @@ describe('RPServerContext', () => {
   let mockEngineClient: MockEngineClient;
   let mockEventEmitter: RPEventEmitter<RPServerEvents>;
   let mockHookBus: RPHookBus<RPServerHooks>;
+  let mockPlatformAdapter: jest.Mocked<PlatformAdapter>;
   let contextOptions: RPServerContextOptions;
   let context: RPServerContext;
 
@@ -166,12 +168,46 @@ describe('RPServerContext', () => {
     mockEngineClient = new MockEngineClient();
     mockEventEmitter = new RPEventEmitter<RPServerEvents>();
     mockHookBus = new RPHookBus<RPServerHooks>();
+    mockPlatformAdapter = {
+      player: {
+        getPlayerId: jest.fn().mockReturnValue(1),
+        getCurrentPlayerId: jest.fn().mockReturnValue(1),
+        getPlayerName: jest.fn().mockReturnValue('TestPlayer'),
+        getPlayerIP: jest.fn().mockReturnValue('127.0.0.1'),
+        kickPlayer: jest.fn(),
+        getPlayerPosition: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+        setPlayerPosition: jest.fn(),
+        getPlayerHealth: jest.fn().mockReturnValue(100),
+      },
+      events: {
+        initializeEvents: jest.fn(),
+        onPlayerJoin: jest.fn(),
+        onPlayerLeave: jest.fn(),
+        onPlayerDeath: jest.fn(),
+        onPlayerSpawn: jest.fn(),
+        onPlayerReady: jest.fn(),
+      },
+      network: {
+        emitToPlayer: jest.fn(),
+        emitToAll: jest.fn(),
+        onClientEvent: jest.fn(),
+        emitToClient: jest.fn(),
+        broadcastToClients: jest.fn(),
+      },
+      core: {
+        getMaxPlayers: jest.fn().mockReturnValue(100),
+        getPlayerCount: jest.fn().mockReturnValue(0),
+        log: jest.fn(),
+      },
+      setEventEmitter: jest.fn(),
+    } as unknown as jest.Mocked<PlatformAdapter>;
 
     contextOptions = {
       logger: mockLogger,
       engineClient: mockEngineClient as unknown as EngineClient,
       eventEmitter: mockEventEmitter,
       hookBus: mockHookBus,
+      platformAdapter: mockPlatformAdapter,
     };
 
     context = new RPServerContext(
