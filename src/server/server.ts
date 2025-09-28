@@ -16,9 +16,6 @@ import { LocalizationService } from './domains/localization/service';
 import { WorldService } from './domains/world/service';
 import { ReferenceService } from './domains/reference/service';
 import { ApiControllerCtor, ApiServer, ApiServerConfig } from './api';
-import { AccountController } from './domains/account/api.controller';
-import { HealthController } from './api/controllers/health.controller';
-import { SessionController } from './domains/session/api.controller';
 import { PlatformAdapter } from './natives/adapters';
 
 /** Configuration options for creating a roleplay server instance */
@@ -39,6 +36,8 @@ export interface RPServerOptions {
   logger?: RPLogger;
   /** API server configuration */
   api: ApiServerConfig;
+  /** Additional controllers to register */
+  additionalControllers?: ApiControllerCtor[];
 }
 
 /** Native integrations and customization options for the server */
@@ -170,9 +169,18 @@ export class RPServer {
       .addService(AccountService);
 
     this.apiServer = new ApiServer(this.context, options.api);
-    this.registerController(HealthController)
-      .registerController(AccountController)
-      .registerController(SessionController);
+
+    import('./api/controllers/health.controller').then(({ HealthController }) => {
+      this.registerController(HealthController);
+    });
+
+    import('./domains/session/api.controller').then(({ SessionController }) => {
+      this.registerController(SessionController);
+    });
+
+    import('./domains/account/api.controller').then(({ AccountController }) => {
+      this.registerController(AccountController);
+    });
   }
 
   /**

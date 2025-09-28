@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Push öncesi test ve build işlemlerini çalıştır
+echo "Running tests before push..."
+npm run test
+
+echo "Building project before push..."
+npm run build
+
+echo "All checks passed! Proceeding with push..."

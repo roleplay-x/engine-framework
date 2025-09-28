@@ -10,6 +10,7 @@ import {
 
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
 import { RPPlayerConnecting } from '../../natives/events/player/player-connecting';
+import { RPPlayerJoined } from '../../natives/events/player/player-joined';
 import { SocketSessionAuthorized } from '../../socket/events/socket-session-authorized';
 import { SocketSessionFinished } from '../../socket/events/socket-session-finished';
 import { RPServerService } from '../../core/server-service';
@@ -22,6 +23,7 @@ import { ReferenceService } from '../reference/service';
 
 import { generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
 import { WorldService } from '../world/service';
+import { ServerPlayer } from '../../natives/entitites';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -65,7 +67,7 @@ export class SessionService extends RPServerService {
   private readonly sessions: Map<SessionId, RPSession> = new Map([]);
 
   /** Mapping of session ID to player for player-session association */
-  private readonly sessionToPlayer: Map<SessionId, PlayerId> = new Map([]);
+  private readonly sessionToPlayer: Map<SessionId, ServerPlayer> = new Map([]);
 
   /**
    * Retrieves a session by its unique identifier.
@@ -213,12 +215,16 @@ export class SessionService extends RPServerService {
   }
 
   @OnServer('playerConnecting')
-  private async onPlayerConnecting({ sessionId, ipAddress }: RPPlayerConnecting) {
+  private async onPlayerConnecting({ sessionId, ipAddress, playerId }: RPPlayerConnecting) {
     try {
       const { token } = await this.getEngineApi(SessionApi).startSession(sessionId, { ipAddress });
+
       const tokenHash = generateSessionTokenHash(sessionId, token);
-      this.sessions.set(sessionId, { id: sessionId, tokenHash });
+      this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
+
       this.eventEmitter.emit('sessionStarted', { sessionId, sessionToken: token });
+
+      this.logger.info(`Player ${sessionId} connected and joined with IP ${ipAddress}`);
     } catch {
       this.eventEmitter.emit('sessionFinished', {
         sessionId,
@@ -235,10 +241,20 @@ export class SessionService extends RPServerService {
 
   @OnServer('socketSessionStarted')
   private async onSocketSessionStarted(payload: SocketSessionStarted) {
-    const tokenHash = await this.getTokenHash(payload.id);
-    this.sessions.set(payload.id, {
-      ...(this.sessions.get(payload.id) ?? { id: payload.id, tokenHash }),
-      hash: payload.hash,
+    const player = this.getPlayerBySession(payload.id);
+    if (!player) {
+      return;
+    }
+
+    const session = this.sessions.get(payload.id);
+    if (session) {
+      session.hash = payload.hash;
+    }
+
+    player.emit('playerJoined', {
+      playerId: player.id,
+      ipAddress: player.ip,
+      sessionId: payload.id,
     });
   }
 
@@ -285,10 +301,10 @@ export class SessionService extends RPServerService {
       character: session.character!,
     });
 
-    const playerId = this.getPlayerBySession(session.id);
-    if (playerId) {
+    const player = this.getPlayerBySession(session.id);
+    if (player) {
       const worldService = this.getService(WorldService);
-      await worldService.setLoginCamera(playerId);
+      await worldService.setLoginCamera(player.id);
     }
   }
 
@@ -335,11 +351,6 @@ export class SessionService extends RPServerService {
   }
 
   private async getTokenHash(sessionId: SessionId): Promise<string> {
-    const tokenHash = this.sessions.get(sessionId)?.tokenHash;
-    if (tokenHash) {
-      return tokenHash;
-    }
-
     const sessionInfo = await this.getEngineApi(SessionApi).getActiveSessionInfo(sessionId);
     return sessionInfo.tokenHash;
   }
@@ -359,12 +370,19 @@ export class SessionService extends RPServerService {
    * sessionService.createPlayerSession('sess_12345', 'player_67890');
    * ```
    */
-  public createPlayerSession(sessionId: SessionId, playerId: string): void {
+  public createPlayerSession(
+    sessionId: SessionId,
+    playerId: string,
+    ip: string,
+    tokenHash: string,
+  ): void {
     if (this.sessionToPlayer.has(sessionId)) {
       throw new Error(`Session ${sessionId} already has an associated player`);
     }
 
-    this.sessionToPlayer.set(sessionId, playerId);
+    const player = ServerPlayer.create(playerId, sessionId, ip, this.context.platformAdapter);
+    this.sessionToPlayer.set(sessionId, player);
+    this.sessions.set(sessionId, { id: sessionId, tokenHash });
   }
 
   /**
@@ -381,7 +399,7 @@ export class SessionService extends RPServerService {
    * }
    * ```
    */
-  public getPlayerBySession(sessionId: SessionId): string | undefined {
+  public getPlayerBySession(sessionId: SessionId): ServerPlayer | undefined {
     return this.sessionToPlayer.get(sessionId);
   }
 
@@ -400,8 +418,8 @@ export class SessionService extends RPServerService {
    * ```
    */
   public getSessionByPlayer(playerId: string): SessionId | undefined {
-    for (const [sessionId, pid] of this.sessionToPlayer.entries()) {
-      if (pid === playerId) {
+    for (const [sessionId, player] of this.sessionToPlayer.entries()) {
+      if (player.id === playerId) {
         return sessionId;
       }
     }
@@ -438,8 +456,8 @@ export class SessionService extends RPServerService {
    * ```
    */
   public removePlayer(playerId: string): void {
-    for (const [sessionId, pid] of this.sessionToPlayer.entries()) {
-      if (pid === playerId) {
+    for (const [sessionId, player] of this.sessionToPlayer.entries()) {
+      if (player.id === playerId) {
         this.sessionToPlayer.delete(sessionId);
       }
     }

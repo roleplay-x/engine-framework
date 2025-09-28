@@ -21,7 +21,8 @@
     "format": "prettier --write 'src/**/*.{ts,tsx,js,json,md}'",
     "build": "tsc -p tsconfig.build.json",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "prepare": "husky"
   },
   "author": "roleplayx",
   "license": "ISC",
@@ -30,8 +31,8 @@
     "node": "^22.0.0"
   },
   "dependencies": {
-    "@roleplayx/engine-sdk": "^0.1.23",
     "@fastify/cors": "^11.1.0",
+    "@roleplayx/engine-sdk": "^0.1.23",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "emittery": "^1.2.0",
@@ -85,12 +86,23 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.3.0",
+    "husky": "^9.1.7",
     "jest": "^30.0.4",
+    "lint-staged": "^16.2.3",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.36.0",
     "typescript-json-schema": "^0.65.1"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.{js,json,md}": [
+      "prettier --write"
+    ]
   }
 }

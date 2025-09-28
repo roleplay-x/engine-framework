@@ -78,8 +78,6 @@ export * from './natives/events/spawn/force-respawn';
 export * from './natives/events/spawn/spawn-failed';
 export * from './natives/events/spawn/spawn-request';
 export * from './natives/services/discord.service';
-export * from './natives/services/player.service';
-export * from './natives/services/spawn.service';
 export * from './natives/types/spawn.types';
 export * from './server';
 export * from './socket/events/socket-account-username-changed';

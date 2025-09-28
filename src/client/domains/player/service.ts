@@ -1,7 +1,9 @@
 import { RPClientService } from '../../core/client-service';
+import { ClientPlayer } from '../../core/entities/player';
 import { OnClient, OnServer } from '../../core/events/decorators';
 import { RPAllClientEvents, RPServerToClientEvents } from '../../core/events/types';
 import { ClientTypes } from '../../core/types';
+import { Vector3 } from '../../../shared';
 
 /**
  * Service for managing player-related functionality in the roleplay client.
@@ -19,7 +21,7 @@ import { ClientTypes } from '../../core/types';
  * ```
  */
 export class PlayerService extends RPClientService<ClientTypes> {
-  private currentPlayer: any = null;
+  private currentPlayer: ClientPlayer | null = null;
   private playerHealth: number = 100;
 
   /**
@@ -33,10 +35,20 @@ export class PlayerService extends RPClientService<ClientTypes> {
   /**
    * Gets the current player instance.
    *
-   * @returns Current player instance
+   * @returns Current player instance or null if not set
    */
-  public getCurrentPlayer(): any {
+  public getCurrentPlayer(): ClientPlayer | null {
     return this.currentPlayer;
+  }
+
+  /**
+   * Sets the current player with the provided data.
+   *
+   * @param player - ClientPlayer instance to set
+   */
+  private setCurrentPlayer(player: ClientPlayer): void {
+    this.currentPlayer = player;
+    this.logger.info('Current player set:', { id: player.id });
   }
 
   /**
@@ -254,7 +266,10 @@ export class PlayerService extends RPClientService<ClientTypes> {
   @OnClient('player:spawned')
   private onPlayerSpawned(data: RPAllClientEvents['player:spawned']): void {
     this.logger.info('Player spawned:', data);
-    this.currentPlayer = data;
+
+    this.setEntityPosition(this.getPlayerPed(), data.position);
+    this.setEntityHeading(this.getPlayerPed(), data.heading);
+
     this.playerHealth = 100;
   }
 
@@ -277,6 +292,13 @@ export class PlayerService extends RPClientService<ClientTypes> {
   @OnServer('playerJoined')
   private onPlayerJoined(data: RPServerToClientEvents['playerJoined']): void {
     this.logger.info('Player joined server:', data);
+
+    if (data.playerId === this.getPlayerId()) {
+      const player = ClientPlayer.create(data.playerId, data.sessionId);
+
+      this.setCurrentPlayer(player);
+      this.logger.info('Current player created with sessionId:', data.sessionId);
+    }
   }
 
   /**

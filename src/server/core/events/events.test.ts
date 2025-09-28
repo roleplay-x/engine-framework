@@ -291,6 +291,8 @@ class BaseEventService extends RPServerService {
     this.eventEmitter.emit('playerConnecting', {
       ipAddress,
       sessionId: 'test-session-123',
+      playerId: 'test-player-123',
+      name: 'TestPlayer',
     });
   }
 }
@@ -623,6 +625,8 @@ describe('Custom Events and Hooks Support', () => {
       expect(baseService.playerConnectingEvents[0]).toEqual({
         ipAddress,
         sessionId: 'test-session-123',
+        playerId: 'test-player-123',
+        name: 'TestPlayer',
       });
     });
 
@@ -731,12 +735,16 @@ describe('Custom Events and Hooks Support', () => {
       baseContext.eventEmitter.emit('playerConnecting', {
         ipAddress: '127.0.0.1',
         sessionId: 'test-session-456',
+        playerId: 'test-player-456',
+        name: 'TestPlayer456',
       });
 
       expect(service.receivedEvents).toHaveLength(1);
       expect(service.receivedEvents[0]).toEqual({
         ipAddress: '127.0.0.1',
         sessionId: 'test-session-456',
+        playerId: 'test-player-456',
+        name: 'TestPlayer456',
       });
     });
   });

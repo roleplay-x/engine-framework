@@ -279,6 +279,8 @@ describe('SessionService', () => {
         mockEventEmitter.emit('playerConnecting', {
           sessionId: testSessionId,
           ipAddress: '192.168.1.1',
+          playerId: 'test-player-123',
+          name: 'TestPlayer',
         });
 
         // Wait for async handler
@@ -300,6 +302,8 @@ describe('SessionService', () => {
         mockEventEmitter.emit('playerConnecting', {
           sessionId: testSessionId,
           ipAddress: '192.168.1.1',
+          playerId: 'test-player-123',
+          name: 'TestPlayer',
         });
 
         // Wait for async handler
@@ -335,6 +339,13 @@ describe('SessionService', () => {
 
     describe('onSocketSessionStarted', () => {
       it('should update session with hash', async () => {
+        // Create a player session first so getPlayerBySession returns a player
+        sessionService.createPlayerSession(
+          testSessionId,
+          'test_player_123',
+          '192.168.1.1',
+          'token_hash',
+        );
         sessionService['sessions'].set(testSessionId, testSession);
 
         mockEventEmitter.emit('socketSessionStarted', {
@@ -555,16 +566,31 @@ describe('SessionService', () => {
 
     describe('createPlayerSession', () => {
       it('should create a player-session association', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
-        expect(sessionService['sessionToPlayer'].get(testSessionId2)).toBe(testPlayerId);
+        expect(sessionService['sessionToPlayer'].get(testSessionId2)?.id).toBe(testPlayerId);
       });
 
       it('should throw error when session already has an associated player', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         expect(() => {
-          sessionService.createPlayerSession(testSessionId2, 'another_player');
+          sessionService.createPlayerSession(
+            testSessionId2,
+            'another_player',
+            '192.168.1.1',
+            'token_hash',
+          );
         }).toThrow(`Session ${testSessionId2} already has an associated player`);
       });
 
@@ -572,21 +598,31 @@ describe('SessionService', () => {
         const playerId2 = 'player_test456';
         const sessionId3 = 'sess_test789';
 
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
-        sessionService.createPlayerSession(sessionId3, playerId2);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
+        sessionService.createPlayerSession(sessionId3, playerId2, '192.168.1.2', 'token_hash2');
 
-        expect(sessionService['sessionToPlayer'].get(testSessionId2)).toBe(testPlayerId);
-        expect(sessionService['sessionToPlayer'].get(sessionId3)).toBe(playerId2);
+        expect(sessionService['sessionToPlayer'].get(testSessionId2)?.id).toBe(testPlayerId);
+        expect(sessionService['sessionToPlayer'].get(sessionId3)?.id).toBe(playerId2);
       });
     });
 
     describe('getPlayerBySession', () => {
       it('should return player ID for existing session', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         const result = sessionService.getPlayerBySession(testSessionId2);
 
-        expect(result).toBe(testPlayerId);
+        expect(result?.id).toBe(testPlayerId);
       });
 
       it('should return undefined for non-existing session', () => {
@@ -598,7 +634,12 @@ describe('SessionService', () => {
 
     describe('getSessionByPlayer', () => {
       it('should return session ID for existing player', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         const result = sessionService.getSessionByPlayer(testPlayerId);
 
@@ -613,8 +654,13 @@ describe('SessionService', () => {
 
       it('should return the first session when player has multiple sessions', () => {
         const sessionId3 = 'sess_test789';
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
-        sessionService.createPlayerSession(sessionId3, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
+        sessionService.createPlayerSession(sessionId3, testPlayerId, '192.168.1.2', 'token_hash2');
 
         const result = sessionService.getSessionByPlayer(testPlayerId);
 
@@ -625,7 +671,12 @@ describe('SessionService', () => {
 
     describe('removePlayerBySession', () => {
       it('should remove player-session association', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
         expect(sessionService['sessionToPlayer'].has(testSessionId2)).toBe(true);
 
         sessionService.removePlayerBySession(testSessionId2);
@@ -643,8 +694,13 @@ describe('SessionService', () => {
     describe('removePlayer', () => {
       it('should remove all sessions for a specific player', () => {
         const sessionId3 = 'sess_test789';
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
-        sessionService.createPlayerSession(sessionId3, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
+        sessionService.createPlayerSession(sessionId3, testPlayerId, '192.168.1.2', 'token_hash2');
 
         sessionService.removePlayer(testPlayerId);
 
@@ -656,14 +712,24 @@ describe('SessionService', () => {
         const otherPlayerId = 'player_other123';
         const otherSessionId = 'sess_other456';
 
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
-        sessionService.createPlayerSession(otherSessionId, otherPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
+        sessionService.createPlayerSession(
+          otherSessionId,
+          otherPlayerId,
+          '192.168.1.3',
+          'token_hash3',
+        );
 
         sessionService.removePlayer(testPlayerId);
 
         expect(sessionService['sessionToPlayer'].has(testSessionId2)).toBe(false);
         expect(sessionService['sessionToPlayer'].has(otherSessionId)).toBe(true);
-        expect(sessionService['sessionToPlayer'].get(otherSessionId)).toBe(otherPlayerId);
+        expect(sessionService['sessionToPlayer'].get(otherSessionId)?.id).toBe(otherPlayerId);
       });
 
       it('should not throw when removing non-existing player', () => {
@@ -675,7 +741,12 @@ describe('SessionService', () => {
 
     describe('hasPlayer', () => {
       it('should return true when session has an associated player', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         const result = sessionService.hasPlayer(testSessionId2);
 
@@ -691,7 +762,12 @@ describe('SessionService', () => {
 
     describe('hasActiveSession', () => {
       it('should return true when player has an active session', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         const result = sessionService.hasActiveSession(testPlayerId);
 
@@ -705,7 +781,12 @@ describe('SessionService', () => {
       });
 
       it('should return false after player sessions are removed', () => {
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
         expect(sessionService.hasActiveSession(testPlayerId)).toBe(true);
 
         sessionService.removePlayer(testPlayerId);
@@ -724,7 +805,12 @@ describe('SessionService', () => {
       it('should remove player-session association when player disconnects', async () => {
         // Setup: Create session and player association
         sessionService['sessions'].set(testSessionId2, testSession);
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         expect(sessionService.hasPlayer(testSessionId2)).toBe(true);
 
@@ -747,7 +833,12 @@ describe('SessionService', () => {
       it('should remove player-session association when session is finished', async () => {
         // Setup: Create session and player association
         sessionService['sessions'].set(testSessionId2, testSession);
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         expect(sessionService.hasPlayer(testSessionId2)).toBe(true);
 
@@ -773,7 +864,12 @@ describe('SessionService', () => {
       it('should remove player-session association when session is dropped', async () => {
         // Setup: Create session and player association
         sessionService['sessions'].set(testSessionId2, testSession);
-        sessionService.createPlayerSession(testSessionId2, testPlayerId);
+        sessionService.createPlayerSession(
+          testSessionId2,
+          testPlayerId,
+          '192.168.1.1',
+          'token_hash',
+        );
 
         expect(sessionService.hasPlayer(testSessionId2)).toBe(true);
 
@@ -812,14 +908,14 @@ describe('SessionService', () => {
         const session3 = 'sess_3';
 
         // Create multiple associations
-        sessionService.createPlayerSession(session1, player1);
-        sessionService.createPlayerSession(session2, player2);
-        sessionService.createPlayerSession(session3, player1); // Same player, different session
+        sessionService.createPlayerSession(session1, player1, '192.168.1.1', 'token_hash1');
+        sessionService.createPlayerSession(session2, player2, '192.168.1.2', 'token_hash2');
+        sessionService.createPlayerSession(session3, player1, '192.168.1.3', 'token_hash3'); // Same player, different session
 
         // Verify all associations exist
-        expect(sessionService.getPlayerBySession(session1)).toBe(player1);
-        expect(sessionService.getPlayerBySession(session2)).toBe(player2);
-        expect(sessionService.getPlayerBySession(session3)).toBe(player1);
+        expect(sessionService.getPlayerBySession(session1)?.id).toBe(player1);
+        expect(sessionService.getPlayerBySession(session2)?.id).toBe(player2);
+        expect(sessionService.getPlayerBySession(session3)?.id).toBe(player1);
 
         expect(sessionService.hasActiveSession(player1)).toBe(true);
         expect(sessionService.hasActiveSession(player2)).toBe(true);
@@ -831,7 +927,7 @@ describe('SessionService', () => {
         expect(sessionService.hasActiveSession(player2)).toBe(true);
         expect(sessionService.getPlayerBySession(session1)).toBeUndefined();
         expect(sessionService.getPlayerBySession(session3)).toBeUndefined();
-        expect(sessionService.getPlayerBySession(session2)).toBe(player2);
+        expect(sessionService.getPlayerBySession(session2)?.id).toBe(player2);
       });
     });
   });

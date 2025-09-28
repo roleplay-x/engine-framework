@@ -22,12 +22,12 @@ import {
   SessionToken,
 } from '../../api';
 import { ConflictError } from '../../core/errors';
-import { SessionService } from '../session/service';
 
 import { AccountService } from './service';
 import { RPAccount } from './models/account';
 import { ImplicitDiscordAuthApiRequest } from './models/request/implicit-discord-auth.api-request';
 import { DiscordOAuthTokenApiRequest } from './models/request/discord-oauth-token.api-request';
+import { SessionService } from '../session/service';
 
 /**
  * Account API Controller

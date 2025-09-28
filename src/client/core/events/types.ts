@@ -24,7 +24,7 @@ export interface RPServerToClientEvents {
     data: { position: { x: number; y: number; z: number }; heading: number };
   };
   'player:died': { playerId: string; position: { x: number; y: number; z: number } };
-  playerJoined: { playerId: string; ipAddress: string; name: string };
+  playerJoined: { playerId: string; ipAddress: string; sessionId: string };
   playerLeft: { playerId: string; reason: string };
   'health:set': number;
   'health:validate': number;
