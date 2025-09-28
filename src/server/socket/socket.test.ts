@@ -201,7 +201,7 @@ describe('EngineSocket Integration Tests', () => {
 
       // Check first retry message
       const hasFirstRetry = warnSpy.mock.calls.some(
-        (call) => call[0] === 'WebSocket connection failed, retrying in 1000ms',
+        (call) => call[0].includes('WebSocket connection failed:') && call[0].includes('retry count 1 with delay 1000ms'),
       );
       expect(hasFirstRetry).toBe(true);
 
@@ -210,7 +210,7 @@ describe('EngineSocket Integration Tests', () => {
       await jest.runOnlyPendingTimersAsync();
 
       const hasSecondRetry = warnSpy.mock.calls.some(
-        (call) => call[0] === 'WebSocket connection failed, retrying in 2000ms',
+        (call) => call[0].includes('WebSocket connection failed:') && call[0].includes('retry count 2 with delay 2000ms'),
       );
       expect(hasSecondRetry).toBe(true);
 
@@ -355,11 +355,11 @@ describe('EngineSocket Integration Tests', () => {
         expect(connectionAttempts).toBeGreaterThan(1);
 
         // Should have logged retry attempt
-        const hasRetryAttempt = warnSpy.mock.calls.some((call) => call[0]?.includes('retrying'));
+        const hasRetryAttempt = warnSpy.mock.calls.some((call) => call[0]?.includes('retry count'));
         expect(hasRetryAttempt).toBe(true);
       } catch {
         // If it still fails, check that retry was attempted
-        const hasRetryAttempt = warnSpy.mock.calls.some((call) => call[0]?.includes('retrying'));
+        const hasRetryAttempt = warnSpy.mock.calls.some((call) => call[0]?.includes('retry count'));
         expect(hasRetryAttempt).toBe(true);
       }
 
