@@ -119,12 +119,16 @@ export class EngineSocket {
 
   private async connectOnce(): Promise<void> {
     return new Promise((resolve, reject) => {
+      const connectionUrl = this.appendQuery(this.config.url, {
+        apiKeyId: this.config.apiKeyId,
+        apiKeySecret: this.config.apiKeySecret,
+        serverId: this.config.serverId,
+      });
+      
+      this.logger.info('Connecting to WebSocket:', connectionUrl);
+      
       this.ws = new ws.WebSocket(
-        this.appendQuery(this.config.url, {
-          apiKeyId: this.config.apiKeyId,
-          apiKeySecret: this.config.apiKeySecret,
-          serverId: this.config.serverId,
-        }),
+        connectionUrl,
         this.config.protocols,
         {
           perMessageDeflate: true,
@@ -156,9 +160,11 @@ export class EngineSocket {
 
       this.ws.onopen = () => {
         this.connectedAt = Date.now();
+        this.logger.info('WebSocket connection opened, waiting for handshake...');
 
         const timer = this.addTimer(
           setTimeout(() => {
+            this.logger.error('WebSocket handshake timeout after 60 seconds');
             this.ws.onmessage = null!;
             reject(new Error('Websocket handshake timeout'));
           }, 60_000),
@@ -168,7 +174,9 @@ export class EngineSocket {
           let msg: SocketMessage;
           try {
             msg = JSON.parse(ev.data as string);
-          } catch {
+            this.logger.debug('Received WebSocket message:', msg);
+          } catch (error) {
+            this.logger.warn('Failed to parse WebSocket message:', ev.data);
             return;
           }
           if (msg.event === 'connected') {
