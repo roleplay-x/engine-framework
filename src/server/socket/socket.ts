@@ -111,7 +111,7 @@ export class EngineSocket {
         process.exit(1);
       }
       const delay = this.baseDelayMs * 2 ** (this.retryCount - 1);
-      this.logger.warn(`WebSocket connection failed, retrying in ${delay}ms`);
+      this.logger.warn(`WebSocket connection failed: ${err} retry count ${this.retryCount} with delay ${delay}ms`);
       await this.delay(delay);
       return this.tryConnect();
     }
