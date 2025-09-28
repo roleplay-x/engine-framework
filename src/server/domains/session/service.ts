@@ -5,6 +5,7 @@ import {
   LinkCharacterToSessionRequest,
   SessionApi,
   SessionEndReason,
+  ConfigKey,
 } from '@roleplayx/engine-sdk';
 
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
@@ -20,6 +21,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '../../core/errors'
 import { ReferenceService } from '../reference/service';
 
 import { generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
+import { WorldService } from '../world/service';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -227,7 +229,6 @@ export class SessionService extends RPServerService {
 
   @OnServer('playerDisconnected')
   private async onPlayerDisconnected({ sessionId, reason }: RPPlayerDisconnected) {
-    // Remove player-session association before finishing session
     this.removePlayerBySession(sessionId);
     await this.getEngineApi(SessionApi).finishSession(sessionId, { endReason: reason });
   }
@@ -247,7 +248,6 @@ export class SessionService extends RPServerService {
       return;
     }
 
-    // Remove player-session association when session is finished
     this.removePlayerBySession(payload.id);
 
     this.eventEmitter.emit('sessionFinished', {
@@ -284,6 +284,12 @@ export class SessionService extends RPServerService {
       account: session.account!,
       character: session.character!,
     });
+
+    const playerId = this.getPlayerBySession(session.id);
+    if (playerId) {
+      const worldService = this.getService(WorldService);
+      await worldService.setLoginCamera(playerId);
+    }
   }
 
   @OnServer('socketSessionUpdated')
@@ -323,7 +329,6 @@ export class SessionService extends RPServerService {
           endReason: SessionEndReason.ConnectionDropped,
         });
         this.sessions.delete(sessionId);
-        // Remove player-session association when session is dropped
         this.removePlayerBySession(sessionId);
       }
     }
@@ -338,8 +343,6 @@ export class SessionService extends RPServerService {
     const sessionInfo = await this.getEngineApi(SessionApi).getActiveSessionInfo(sessionId);
     return sessionInfo.tokenHash;
   }
-
-  // Player-Session Management Methods
 
   /**
    * Creates a player-session association.

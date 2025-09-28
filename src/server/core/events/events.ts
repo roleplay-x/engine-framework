@@ -65,12 +65,10 @@ export interface RPServerEvents {
   socketCameraUpdated: SocketCameraUpdated;
   socketCameraEnabled: SocketCameraEnabled;
   socketCameraDisabled: SocketCameraDisabled;
-  // SOCKET - SOUND
   socketSoundCreated: SocketSoundCreated;
   socketSoundUpdated: SocketSoundUpdated;
   socketSoundEnabled: SocketSoundEnabled;
   socketSoundDisabled: SocketSoundDisabled;
-  // SOCKET - SESSION
   socketSessionStarted: SocketSessionStarted;
   socketSessionAuthorized: SocketSessionAuthorized;
   socketSessionCharacterLinked: SocketSessionCharacterLinked;
@@ -78,7 +76,6 @@ export interface RPServerEvents {
   socketSessionFinished: SocketSessionFinished;
   // SOCKET - ACCOUNT
   socketAccountUsernameChanged: SocketAccountUsernameChanged;
-  // SOCKET- REFERENCE
   socketMetricsUpdated: SocketMetricsUpdated;
   socketSegmentDefinitionCreated: SocketSegmentDefinitionCreated;
   socketSegmentDefinitionUpdated: SocketSegmentDefinitionUpdated;
@@ -86,35 +83,27 @@ export interface RPServerEvents {
   socketSegmentCreated: SocketSegmentCreated;
   socketSegmentRemoved: SocketSegmentRemoved;
 
-  // CONFIGURATION
   configurationUpdated: RPConfigurationUpdated;
 
-  // LOCALIZATION
   localesUpdated: RPLocalesUpdated;
   localizationUpdated: RPLocalizationUpdated;
 
-  // CAMERA
   cameraCreated: RPCameraCreated;
   cameraUpdated: RPCameraUpdated;
 
-  // SOUND
   soundCreated: RPSoundCreated;
   soundUpdated: RPSoundUpdated;
 
-  // SESSION
   sessionStarted: RPSessionStarted;
   sessionFinished: RPSessionFinished;
   sessionAuthorized: RPSessionAuthorized;
   sessionCharacterLinked: RPSessionCharacterLinked;
   sessionUpdated: RPSessionUpdated;
 
-  // CHARACTER
   characterSync: RPCharacterSync;
 
-  // ACCOUNT
   accountUsernameChanged: RPAccountUsernameChanged;
 
-  // REFERENCE
   referenceMetricsUpdated: RPReferenceMetricsUpdated;
   segmentCreated: RPSegmentCreated;
   segmentRemoved: RPSegmentRemoved;

@@ -75,7 +75,6 @@ export abstract class RPClientService<T extends ClientTypes = ClientTypes> {
    * @returns The event service instance
    */
   protected get eventService() {
-    // Lazy loading to avoid circular dependency
     const { EventService } = require('../domains/event/service');
     return this.context.getService(EventService);
   }
@@ -113,10 +112,10 @@ export abstract class RPClientService<T extends ClientTypes = ClientTypes> {
    * public async init(): Promise<void> {
    *   // Set up event listeners
    *   this.eventEmitter.on('playerSpawned', this.onPlayerSpawned.bind(this));
-   *   
+   *
    *   // Load configuration
    *   await this.loadConfig();
-   *   
+   *
    *   // Call parent implementation
    *   await super.init();
    * }
@@ -140,10 +139,10 @@ export abstract class RPClientService<T extends ClientTypes = ClientTypes> {
    * public async dispose(): Promise<void> {
    *   // Remove event listeners
    *   this.eventEmitter.off('playerSpawned', this.onPlayerSpawned);
-   *   
+   *
    *   // Save state
    *   await this.saveState();
-   *   
+   *
    *   // Call parent implementation
    *   await super.dispose();
    * }
@@ -164,15 +163,15 @@ export abstract class RPClientService<T extends ClientTypes = ClientTypes> {
    */
   private getEventHandlers(): RPClientEventHandlerMethods {
     const handlers: RPClientEventHandlerMethods = {};
-    
+
     const eventHandlers = getEventHandlers(this as Record<string, unknown>);
-    
+
     for (const [event, handlerList] of Object.entries(eventHandlers)) {
       if (Array.isArray(handlerList)) {
-        handlers[event] = handlerList.map(handler => handler.bind(this));
+        handlers[event] = handlerList.map((handler) => handler.bind(this));
       }
     }
-    
+
     return handlers;
   }
 

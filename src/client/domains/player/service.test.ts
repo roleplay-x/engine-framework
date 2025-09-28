@@ -5,12 +5,13 @@ import { MockLogger } from '../../../../test/mocks';
 
 import { PlayerService } from './service';
 import { ClientPlatformAdapter } from '../../natives/adapters/platform.adapter';
+import { RPClientContext } from '../../core';
 
 describe('PlayerService', () => {
   let mockLogger: MockLogger;
   let mockPlatformAdapter: jest.Mocked<ClientPlatformAdapter>;
   let playerService: PlayerService;
-  let mockContext: any;
+  let mockContext: jest.Mocked<RPClientContext>;
 
   beforeEach(() => {
     mockLogger = new MockLogger();
@@ -52,8 +53,8 @@ describe('PlayerService', () => {
         trace: jest.fn(),
       },
       platformAdapter: mockPlatformAdapter,
-    } as any;
-    
+    } as unknown as jest.Mocked<RPClientContext>;
+
     playerService = new PlayerService(mockContext);
   });
 
@@ -250,10 +251,13 @@ describe('PlayerService', () => {
       it('should handle player spawn event', () => {
         const playerId = 123;
         const position = { x: 100, y: 200, z: 300 };
-        
+
         (playerService as any).onPlayerSpawned({ id: playerId, position });
-        
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player spawned:', { id: playerId, position });
+
+        expect(mockContext.logger.info).toHaveBeenCalledWith('Player spawned:', {
+          id: playerId,
+          position,
+        });
       });
     });
 
@@ -262,69 +266,22 @@ describe('PlayerService', () => {
         const playerId = 123;
         const killerId = 456;
         const weaponHash = 789;
-        
+
         (playerService as any).onPlayerDied({ playerId, killerId, weaponHash });
-        
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', { playerId, killerId, weaponHash });
+
+        expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', {
+          playerId,
+          killerId,
+          weaponHash,
+        });
       });
 
       it('should handle player death without killer', () => {
         const playerId = 123;
-        
+
         (playerService as any).onPlayerDied({ playerId });
-        
+
         expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', { playerId });
-      });
-    });
-
-    describe('onEntityDamage', () => {
-      it('should handle entity damage event', () => {
-        const victim = 123;
-        const attacker = 456;
-        const weaponHash = 789;
-        const damage = 25;
-        
-        (playerService as any).onEntityDamage(victim, attacker, weaponHash, damage);
-        
-        expect(mockContext.logger.info).toHaveBeenCalledWith(`Entity ${victim} took ${damage} damage from ${attacker} with weapon ${weaponHash}`);
-      });
-
-      it('should reduce player health when victim is local player', () => {
-        (mockPlatformAdapter.player.getPlayerId as jest.Mock).mockReturnValue('123');
-        playerService['currentPlayer'] = { id: 123 };
-        const victim = 123;
-        const attacker = 456;
-        const weaponHash = 789;
-        const damage = 25;
-        
-        (playerService as any).onEntityDamage(victim, attacker, weaponHash, damage);
-        
-        expect(playerService['playerHealth']).toBe(75); // 100 - 25
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player health reduced to: 75');
-      });
-    });
-
-    describe('onVehicleEntered', () => {
-      it('should handle vehicle entered event', () => {
-        const playerId = 123;
-        const vehicleId = 456;
-        const seat = 0;
-        
-        (playerService as any).onVehicleEntered(playerId, vehicleId, seat);
-        
-        expect(mockContext.logger.info).toHaveBeenCalledWith(`Player ${playerId} entered vehicle ${vehicleId} in seat ${seat}`);
-      });
-    });
-
-    describe('onVehicleExited', () => {
-      it('should handle vehicle exited event', () => {
-        const playerId = 123;
-        const vehicleId = 456;
-        const seat = 0;
-        
-        (playerService as any).onVehicleExited(playerId, vehicleId, seat);
-        
-        expect(mockContext.logger.info).toHaveBeenCalledWith(`Player ${playerId} exited vehicle ${vehicleId} from seat ${seat}`);
       });
     });
   });
@@ -333,24 +290,16 @@ describe('PlayerService', () => {
     it('should handle complete player lifecycle', async () => {
       await playerService.setPlayerModel('player_zero');
       expect(mockPlatformAdapter.player.setPlayerModel).toHaveBeenCalledWith('player_zero');
-      
+
       playerService.setPlayerHealth(75);
       expect(playerService.getPlayerHealth()).toBe(75);
-      
-      playerService['currentPlayer'] = { id: 123 };
-      (playerService as any).onEntityDamage(123, 456, 789, 25);
-      expect(playerService.getPlayerHealth()).toBe(50);
-      
-      (playerService as any).onPlayerDied({ playerId: 123, killerId: 456, weaponHash: 789 });
-      expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', { playerId: 123, killerId: 456, weaponHash: 789 });
-    });
 
-    it('should handle vehicle events', () => {
-      (playerService as any).onVehicleEntered(123, 456, 0);
-      expect(mockContext.logger.info).toHaveBeenCalledWith('Player 123 entered vehicle 456 in seat 0');
-      
-      (playerService as any).onVehicleExited(123, 456, 0);
-      expect(mockContext.logger.info).toHaveBeenCalledWith('Player 123 exited vehicle 456 from seat 0');
+      (playerService as any).onPlayerDied({ playerId: 123, killerId: 456, weaponHash: 789 });
+      expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', {
+        playerId: 123,
+        killerId: 456,
+        weaponHash: 789,
+      });
     });
   });
 
@@ -359,13 +308,15 @@ describe('PlayerService', () => {
       const error = new Error('Platform adapter error');
       (mockPlatformAdapter.player.setPlayerModel as jest.Mock).mockRejectedValue(error);
 
-      await expect(playerService.setPlayerModel('player_zero')).rejects.toThrow('Platform adapter error');
+      await expect(playerService.setPlayerModel('player_zero')).rejects.toThrow(
+        'Platform adapter error',
+      );
     });
 
     it('should handle health clamping errors gracefully', () => {
       playerService.setPlayerHealth(-50);
       expect(playerService['playerHealth']).toBe(0);
-      
+
       playerService.setPlayerHealth(150);
       expect(playerService['playerHealth']).toBe(100);
     });

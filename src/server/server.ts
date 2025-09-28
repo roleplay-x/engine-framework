@@ -120,7 +120,11 @@ export class RPServer {
    * @param options - Server configuration options
    * @param natives - Native integrations and adapters
    */
-  private constructor(options: RPServerOptions, natives: RPServerNatives, platformAdapter: PlatformAdapter) {
+  private constructor(
+    options: RPServerOptions,
+    natives: RPServerNatives,
+    platformAdapter: PlatformAdapter,
+  ) {
     const logger = options.logger ?? defaultLogger;
     const engineClient = new EngineClient(
       {
@@ -154,7 +158,6 @@ export class RPServer {
       logger,
       platformAdapter,
       ...natives?.customContext?.options,
-
     };
 
     this.context = RPServerContext.create(contextType, contextOptions);
@@ -200,7 +203,11 @@ export class RPServer {
     TOptions extends CustomServerContextOptions = CustomServerContextOptions,
     TEvents extends RPServerEvents = RPServerEvents,
     THooks extends RPServerHooks = RPServerHooks,
-  >(config: RPServerOptions, natives: RPServerNatives<TOptions, TEvents, THooks>, platformAdapter: PlatformAdapter): RPServer {
+  >(
+    config: RPServerOptions,
+    natives: RPServerNatives<TOptions, TEvents, THooks>,
+    platformAdapter: PlatformAdapter,
+  ): RPServer {
     this.instance = new RPServer(config, natives as RPServerNatives, platformAdapter);
     return this.instance;
   }

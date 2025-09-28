@@ -7,11 +7,17 @@ import { RPClientContext } from './core/context';
 import { RPClient, RPClientOptions } from './core/client';
 import { EventService } from './domains/event/service';
 import { PlayerService } from './domains/player/service';
+import { HealthService } from './domains/health/service';
+import { SpawnService } from './domains/spawn/service';
+import { CameraService } from './domains/camera/service';
 import { ClientPlatformAdapter } from './natives/adapters/platform.adapter';
 
 jest.mock('./core/context');
 jest.mock('./domains/event/service');
 jest.mock('./domains/player/service');
+jest.mock('./domains/health/service');
+jest.mock('./domains/spawn/service');
+jest.mock('./domains/camera/service');
 
 describe('RPClient', () => {
   let mockLogger: MockLogger;
@@ -192,9 +198,12 @@ describe('RPClient', () => {
     it('should register all core services in correct order', () => {
       RPClient.create(testClientOptions, testNatives, mockPlatformAdapter);
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(2);
+      expect(mockContext.addService).toHaveBeenCalledTimes(5);
       expect(mockContext.addService).toHaveBeenNthCalledWith(1, EventService);
       expect(mockContext.addService).toHaveBeenNthCalledWith(2, PlayerService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(3, HealthService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(4, SpawnService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(5, CameraService);
     });
 
     it('should replace previous instance when called multiple times', () => {
@@ -384,9 +393,12 @@ describe('RPClient', () => {
       const serviceOrder = [
         EventService,
         PlayerService,
+        HealthService,
+        SpawnService,
+        CameraService,
       ];
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(2);
+      expect(mockContext.addService).toHaveBeenCalledTimes(5);
       serviceOrder.forEach((Service, index) => {
         expect(mockContext.addService).toHaveBeenNthCalledWith(index + 1, Service);
       });

@@ -35,9 +35,9 @@ describe('EventService', () => {
       logger: mockLogger,
       platformAdapter: mockPlatformAdapter,
     } as any;
-    
+
     eventService = new EventService(mockContext);
-    
+
     await eventService.init();
   });
 
@@ -56,7 +56,10 @@ describe('EventService', () => {
       const handler = jest.fn();
       eventService.onServerEvent('testEvent', handler);
 
-      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith('testEvent', expect.any(Function));
+      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
+        'testEvent',
+        expect.any(Function),
+      );
     });
   });
 
@@ -74,7 +77,10 @@ describe('EventService', () => {
       const handler = jest.fn();
       eventService.onGameEvent('entityDamage', handler);
 
-      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith('entityDamage', expect.any(Function));
+      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        expect.any(Function),
+      );
     });
 
     it('should support typed game events', () => {
@@ -86,7 +92,10 @@ describe('EventService', () => {
       };
 
       eventService.onGameEvent('entityDamage', handler);
-      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith('entityDamage', expect.any(Function));
+      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        expect.any(Function),
+      );
     });
   });
 
@@ -95,7 +104,10 @@ describe('EventService', () => {
       const handler = jest.fn();
       eventService.offGameEvent('entityDamage', handler);
 
-      expect(mockPlatformAdapter.network.offGameEvent).toHaveBeenCalledWith('entityDamage', handler);
+      expect(mockPlatformAdapter.network.offGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        handler,
+      );
     });
   });
 
@@ -103,7 +115,10 @@ describe('EventService', () => {
     it('should delegate to platform adapter network', () => {
       eventService.mapPlatformEvent('customEvent', 'entityDamage');
 
-      expect(mockPlatformAdapter.network.mapPlatformEvent).toHaveBeenCalledWith('customEvent', 'entityDamage');
+      expect(mockPlatformAdapter.network.mapPlatformEvent).toHaveBeenCalledWith(
+        'customEvent',
+        'entityDamage',
+      );
     });
   });
 
@@ -118,7 +133,7 @@ describe('EventService', () => {
   describe('getMappedGameEvent', () => {
     it('should delegate to platform adapter network', () => {
       (mockPlatformAdapter.network.getMappedGameEvent as jest.Mock).mockReturnValue('entityDamage');
-      
+
       const result = eventService.getMappedGameEvent('entityDamage');
 
       expect(mockPlatformAdapter.network.getMappedGameEvent).toHaveBeenCalledWith('entityDamage');
@@ -127,7 +142,7 @@ describe('EventService', () => {
 
     it('should return null when no mapping exists', () => {
       (mockPlatformAdapter.network.getMappedGameEvent as jest.Mock).mockReturnValue(null);
-      
+
       const result = eventService.getMappedGameEvent('unknownEvent');
 
       expect(result).toBeNull();
@@ -138,7 +153,11 @@ describe('EventService', () => {
     it('should delegate to platform adapter network', () => {
       eventService.emitToServer('testEvent', 'arg1', 'arg2');
 
-      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith('testEvent', 'arg1', 'arg2');
+      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith(
+        'testEvent',
+        'arg1',
+        'arg2',
+      );
     });
   });
 
@@ -147,7 +166,10 @@ describe('EventService', () => {
       const handler = jest.fn();
       eventService.on('testEvent', handler);
 
-      expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith('testEvent', expect.any(Function));
+      expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith(
+        'testEvent',
+        expect.any(Function),
+      );
     });
   });
 
@@ -194,7 +216,7 @@ describe('EventService', () => {
   describe('listenerCount', () => {
     it('should delegate to platform adapter network', () => {
       (mockPlatformAdapter.network.listenerCount as jest.Mock).mockReturnValue(5);
-      
+
       const count = eventService.listenerCount('testEvent');
 
       expect(mockPlatformAdapter.network.listenerCount).toHaveBeenCalledWith('testEvent');
@@ -205,36 +227,50 @@ describe('EventService', () => {
   describe('integration scenarios', () => {
     it('should handle complete event lifecycle', () => {
       const handler = jest.fn();
-      
+
       eventService.onGameEvent('entityDamage', handler);
-      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith('entityDamage', expect.any(Function));
-      
+      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        expect.any(Function),
+      );
+
       eventService.offGameEvent('entityDamage', handler);
-      expect(mockPlatformAdapter.network.offGameEvent).toHaveBeenCalledWith('entityDamage', handler);
-      
+      expect(mockPlatformAdapter.network.offGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        handler,
+      );
+
       eventService.listenerCount('entityDamage');
       expect(mockPlatformAdapter.network.listenerCount).toHaveBeenCalledWith('entityDamage');
     });
 
     it('should handle platform event mapping lifecycle', () => {
       eventService.mapPlatformEvent('onPlayerSpawn', 'entityDamage');
-      expect(mockPlatformAdapter.network.mapPlatformEvent).toHaveBeenCalledWith('onPlayerSpawn', 'entityDamage');
-      
+      expect(mockPlatformAdapter.network.mapPlatformEvent).toHaveBeenCalledWith(
+        'onPlayerSpawn',
+        'entityDamage',
+      );
+
       (mockPlatformAdapter.network.getMappedGameEvent as jest.Mock).mockReturnValue('entityDamage');
       const mappedEvent = eventService.getMappedGameEvent('onPlayerSpawn');
       expect(mappedEvent).toBe('entityDamage');
-      
+
       eventService.unmapPlatformEvent('onPlayerSpawn');
       expect(mockPlatformAdapter.network.unmapPlatformEvent).toHaveBeenCalledWith('onPlayerSpawn');
     });
 
     it('should handle server communication', () => {
       eventService.emitToServer('playerReady', { playerId: '123' });
-      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith('playerReady', { playerId: '123' });
-      
+      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith('playerReady', {
+        playerId: '123',
+      });
+
       const serverHandler = jest.fn();
       eventService.onServerEvent('playerData', serverHandler);
-      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith('playerData', expect.any(Function));
+      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
+        'playerData',
+        expect.any(Function),
+      );
     });
   });
 
@@ -246,7 +282,9 @@ describe('EventService', () => {
       });
 
       const handler = jest.fn();
-      expect(() => eventService.onGameEvent('entityDamage', handler)).toThrow('Platform adapter error');
+      expect(() => eventService.onGameEvent('entityDamage', handler)).toThrow(
+        'Platform adapter error',
+      );
     });
 
     it('should handle mapping errors gracefully', () => {
@@ -255,7 +293,9 @@ describe('EventService', () => {
         throw error;
       });
 
-      expect(() => eventService.mapPlatformEvent('testEvent', 'entityDamage')).toThrow('Mapping error');
+      expect(() => eventService.mapPlatformEvent('testEvent', 'entityDamage')).toThrow(
+        'Mapping error',
+      );
     });
   });
 });

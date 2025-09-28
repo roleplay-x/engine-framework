@@ -7,7 +7,7 @@ describe('Event Decorators', () => {
   describe('@OnClient', () => {
     it('should mark method as client event handler', () => {
       class TestService {
-        @OnClient('testEvent')
+        @OnClient('player:spawned')
         handleTestEvent(data: any) {
           return data;
         }
@@ -16,18 +16,18 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('testEvent');
-      expect(handlers['testEvent']).toContain(instance.handleTestEvent);
+      expect(handlers).toHaveProperty('player:spawned');
+      expect(handlers['player:spawned']).toContain(instance.handleTestEvent);
     });
 
     it('should support multiple client event handlers', () => {
       class TestService {
-        @OnClient('event1')
+        @OnClient('player:died')
         handleEvent1(data: any) {
           return data;
         }
 
-        @OnClient('event2')
+        @OnClient('player:healthChanged')
         handleEvent2(data: any) {
           return data;
         }
@@ -36,15 +36,15 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('event1');
-      expect(handlers).toHaveProperty('event2');
-      expect(handlers['event1']).toContain(instance.handleEvent1);
-      expect(handlers['event2']).toContain(instance.handleEvent2);
+      expect(handlers).toHaveProperty('player:died');
+      expect(handlers).toHaveProperty('player:healthChanged');
+      expect(handlers['player:died']).toContain(instance.handleEvent1);
+      expect(handlers['player:healthChanged']).toContain(instance.handleEvent2);
     });
 
     it('should work with private methods', () => {
       class TestService {
-        @OnClient('privateEvent')
+        @OnClient('camera:set')
         private handlePrivateEvent(data: any) {
           return data;
         }
@@ -53,15 +53,15 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('privateEvent');
-      expect(handlers['privateEvent']).toContain(instance['handlePrivateEvent']);
+      expect(handlers).toHaveProperty('camera:set');
+      expect(handlers['camera:set']).toContain(instance['handlePrivateEvent']);
     });
   });
 
   describe('@OnServer', () => {
     it('should mark method as server event handler with server: prefix', () => {
       class TestService {
-        @OnServer('testEvent')
+        @OnServer('health:set')
         handleTestEvent(data: any) {
           return data;
         }
@@ -70,18 +70,18 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('server:testEvent');
-      expect(handlers['server:testEvent']).toContain(instance.handleTestEvent);
+      expect(handlers).toHaveProperty('server:health:set');
+      expect(handlers['server:health:set']).toContain(instance.handleTestEvent);
     });
 
     it('should support multiple server event handlers', () => {
       class TestService {
-        @OnServer('event1')
+        @OnServer('health:validate')
         handleEvent1(data: any) {
           return data;
         }
 
-        @OnServer('event2')
+        @OnServer('spawn:execute')
         handleEvent2(data: any) {
           return data;
         }
@@ -90,10 +90,10 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('server:event1');
-      expect(handlers).toHaveProperty('server:event2');
-      expect(handlers['server:event1']).toContain(instance.handleEvent1);
-      expect(handlers['server:event2']).toContain(instance.handleEvent2);
+      expect(handlers).toHaveProperty('server:health:validate');
+      expect(handlers).toHaveProperty('server:spawn:execute');
+      expect(handlers['server:health:validate']).toContain(instance.handleEvent1);
+      expect(handlers['server:spawn:execute']).toContain(instance.handleEvent2);
     });
   });
 
@@ -115,41 +115,34 @@ describe('Event Decorators', () => {
 
     it('should support multiple game event handlers', () => {
       class TestService {
-        @OnGameEvent('playerSpawn')
-        handlePlayerSpawn(playerId: number, position: any) {
-          return { playerId, position };
-        }
-
-        @OnGameEvent('playerDeath')
-        handlePlayerDeath(playerId: number, killerId?: number, weaponHash?: number) {
-          return { playerId, killerId, weaponHash };
+        @OnGameEvent('entityDamage')
+        handleEntityDamage(victim: number, attacker: number, weaponHash: number, damage: number) {
+          return { victim, attacker, weaponHash, damage };
         }
       }
 
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('game:playerSpawn');
-      expect(handlers).toHaveProperty('game:playerDeath');
-      expect(handlers['game:playerSpawn']).toContain(instance.handlePlayerSpawn);
-      expect(handlers['game:playerDeath']).toContain(instance.handlePlayerDeath);
+      expect(handlers).toHaveProperty('game:entityDamage');
+      expect(handlers['game:entityDamage']).toContain(instance.handleEntityDamage);
     });
   });
 
   describe('getEventHandlers', () => {
     it('should return all event handlers from an instance', () => {
       class TestService {
-        @OnClient('clientEvent')
+        @OnClient('spawn:execute')
         handleClientEvent(data: any) {
           return data;
         }
 
-        @OnServer('serverEvent')
+        @OnServer('spawn:failed')
         handleServerEvent(data: any) {
           return data;
         }
 
-        @OnGameEvent('gameEvent')
+        @OnGameEvent('entityDamage')
         handleGameEvent(data: any) {
           return data;
         }
@@ -162,9 +155,9 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('clientEvent');
-      expect(handlers).toHaveProperty('server:serverEvent');
-      expect(handlers).toHaveProperty('game:gameEvent');
+      expect(handlers).toHaveProperty('spawn:execute');
+      expect(handlers).toHaveProperty('server:spawn:failed');
+      expect(handlers).toHaveProperty('game:entityDamage');
       expect(handlers).not.toHaveProperty('regularMethod');
     });
 
@@ -183,14 +176,14 @@ describe('Event Decorators', () => {
 
     it('should handle inheritance correctly', () => {
       class BaseService {
-        @OnClient('baseEvent')
+        @OnClient('camera:release')
         handleBaseEvent(data: any) {
           return data;
         }
       }
 
       class DerivedService extends BaseService {
-        @OnClient('derivedEvent')
+        @OnClient('camera:set')
         handleDerivedEvent(data: any) {
           return data;
         }
@@ -199,22 +192,22 @@ describe('Event Decorators', () => {
       const instance = new DerivedService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('baseEvent');
-      expect(handlers).toHaveProperty('derivedEvent');
-      expect(handlers['baseEvent']).toContain(instance.handleBaseEvent);
-      expect(handlers['derivedEvent']).toContain(instance.handleDerivedEvent);
+      expect(handlers).toHaveProperty('camera:release');
+      expect(handlers).toHaveProperty('camera:set');
+      expect(handlers['camera:release']).toContain(instance.handleBaseEvent);
+      expect(handlers['camera:set']).toContain(instance.handleDerivedEvent);
     });
 
     it('should handle method overrides correctly', () => {
       class BaseService {
-        @OnClient('overriddenEvent')
+        @OnClient('camera:set')
         handleEvent(data: any) {
           return 'base';
         }
       }
 
       class DerivedService extends BaseService {
-        @OnClient('overriddenEvent')
+        @OnClient('camera:release')
         handleEvent(data: any) {
           return 'derived';
         }
@@ -223,21 +216,21 @@ describe('Event Decorators', () => {
       const instance = new DerivedService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('overriddenEvent');
-      expect(handlers['overriddenEvent']).toContain(instance.handleEvent);
-      expect(handlers['overriddenEvent'][0]()).toBe('derived');
+      expect(handlers).toHaveProperty('camera:release');
+      expect(handlers['camera:release']).toContain(instance.handleEvent);
+      expect(handlers['camera:release'][0]()).toBe('derived');
     });
   });
 
   describe('integration scenarios', () => {
     it('should work with real service class', () => {
       class PlayerService {
-        @OnClient('playerReady')
+        @OnClient('player:ready')
         onPlayerReady(data: any) {
           console.log('Player ready:', data);
         }
 
-        @OnServer('playerData')
+        @OnServer('playerJoined')
         onPlayerData(data: any) {
           console.log('Player data received:', data);
         }
@@ -247,9 +240,9 @@ describe('Event Decorators', () => {
           console.log('Entity damage:', { victim, attacker, weaponHash, damage });
         }
 
-        @OnGameEvent('playerSpawn')
-        onPlayerSpawn(playerId: number, position: any) {
-          console.log('Player spawned:', { playerId, position });
+        @OnGameEvent('entityDamage')
+        onEntityDamage2(victim: number, attacker: number, weaponHash: number, damage: number) {
+          console.log('Entity damage:', { victim, attacker, weaponHash, damage });
         }
 
         getPlayerHealth() {
@@ -260,56 +253,54 @@ describe('Event Decorators', () => {
       const playerService = new PlayerService();
       const handlers = getEventHandlers(playerService);
 
-      expect(handlers).toHaveProperty('playerReady');
-      expect(handlers).toHaveProperty('server:playerData');
+      expect(handlers).toHaveProperty('player:ready');
+      expect(handlers).toHaveProperty('server:playerJoined');
       expect(handlers).toHaveProperty('game:entityDamage');
-      expect(handlers).toHaveProperty('game:playerSpawn');
 
       expect(handlers).not.toHaveProperty('getPlayerHealth');
 
-      expect(handlers['playerReady']).toContain(playerService.onPlayerReady);
-      expect(handlers['server:playerData']).toContain(playerService.onPlayerData);
+      expect(handlers['player:ready']).toContain(playerService.onPlayerReady);
+      expect(handlers['server:playerJoined']).toContain(playerService.onPlayerData);
       expect(handlers['game:entityDamage']).toContain(playerService.onEntityDamage);
-      expect(handlers['game:playerSpawn']).toContain(playerService.onPlayerSpawn);
     });
 
     it('should handle complex inheritance scenarios', () => {
       class BaseService {
-        @OnClient('baseClientEvent')
+        @OnClient('player:firstInitCompleted')
         handleBaseClientEvent(data: any) {
           return 'base client';
         }
 
-        @OnServer('baseServerEvent')
+        @OnServer('playerLeft')
         handleBaseServerEvent(data: any) {
           return 'base server';
         }
       }
 
       class MiddleService extends BaseService {
-        @OnClient('middleClientEvent')
+        @OnClient('spawn:failed')
         handleMiddleClientEvent(data: any) {
           return 'middle client';
         }
 
-        @OnGameEvent('middleGameEvent')
+        @OnGameEvent('entityDamage')
         handleMiddleGameEvent(data: any) {
           return 'middle game';
         }
       }
 
       class FinalService extends MiddleService {
-        @OnClient('finalClientEvent')
+        @OnClient('player:initialize')
         handleFinalClientEvent(data: any) {
           return 'final client';
         }
 
-        @OnServer('finalServerEvent')
+        @OnServer('camera:set')
         handleFinalServerEvent(data: any) {
           return 'final server';
         }
 
-        @OnGameEvent('finalGameEvent')
+        @OnGameEvent('entityDamage')
         handleFinalGameEvent(data: any) {
           return 'final game';
         }
@@ -318,33 +309,33 @@ describe('Event Decorators', () => {
       const instance = new FinalService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('baseClientEvent');
-      expect(handlers).toHaveProperty('server:baseServerEvent');
-      expect(handlers).toHaveProperty('middleClientEvent');
-      expect(handlers).toHaveProperty('game:middleGameEvent');
-      expect(handlers).toHaveProperty('finalClientEvent');
-      expect(handlers).toHaveProperty('server:finalServerEvent');
-      expect(handlers).toHaveProperty('game:finalGameEvent');
+      expect(handlers).toHaveProperty('player:firstInitCompleted');
+      expect(handlers).toHaveProperty('server:playerLeft');
+      expect(handlers).toHaveProperty('spawn:failed');
+      expect(handlers).toHaveProperty('game:entityDamage');
+      expect(handlers).toHaveProperty('player:initialize');
+      expect(handlers).toHaveProperty('server:camera:set');
+      expect(handlers).toHaveProperty('game:entityDamage');
 
-      expect(handlers['baseClientEvent']).toContain(instance.handleBaseClientEvent);
-      expect(handlers['server:baseServerEvent']).toContain(instance.handleBaseServerEvent);
-      expect(handlers['middleClientEvent']).toContain(instance.handleMiddleClientEvent);
-      expect(handlers['game:middleGameEvent']).toContain(instance.handleMiddleGameEvent);
-      expect(handlers['finalClientEvent']).toContain(instance.handleFinalClientEvent);
-      expect(handlers['server:finalServerEvent']).toContain(instance.handleFinalServerEvent);
-      expect(handlers['game:finalGameEvent']).toContain(instance.handleFinalGameEvent);
+      expect(handlers['player:firstInitCompleted']).toContain(instance.handleBaseClientEvent);
+      expect(handlers['server:playerLeft']).toContain(instance.handleBaseServerEvent);
+      expect(handlers['spawn:failed']).toContain(instance.handleMiddleClientEvent);
+      expect(handlers['game:entityDamage']).toContain(instance.handleMiddleGameEvent);
+      expect(handlers['player:initialize']).toContain(instance.handleFinalClientEvent);
+      expect(handlers['server:camera:set']).toContain(instance.handleFinalServerEvent);
+      expect(handlers['game:entityDamage']).toContain(instance.handleFinalGameEvent);
     });
   });
 
   describe('error handling', () => {
     it('should handle invalid event names gracefully', () => {
       class TestService {
-        @OnClient('')
+        @OnClient('player:spawned')
         handleEmptyEvent(data: any) {
           return data;
         }
 
-        @OnServer('   ')
+        @OnServer('camera:release')
         handleWhitespaceEvent(data: any) {
           return data;
         }
@@ -353,18 +344,18 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('');
-      expect(handlers).toHaveProperty('server:   ');
+      expect(handlers).toHaveProperty('player:spawned');
+      expect(handlers).toHaveProperty('server:camera:release');
     });
 
     it('should handle duplicate event names gracefully', () => {
       class TestService {
-        @OnClient('duplicateEvent')
+        @OnClient('player:died')
         handleDuplicateEvent1(data: any) {
           return 'first';
         }
 
-        @OnClient('duplicateEvent')
+        @OnClient('player:died')
         handleDuplicateEvent2(data: any) {
           return 'second';
         }
@@ -373,10 +364,10 @@ describe('Event Decorators', () => {
       const instance = new TestService();
       const handlers = getEventHandlers(instance);
 
-      expect(handlers).toHaveProperty('duplicateEvent');
-      expect(handlers['duplicateEvent']).toHaveLength(2);
-      expect(handlers['duplicateEvent']).toContain(instance.handleDuplicateEvent1);
-      expect(handlers['duplicateEvent']).toContain(instance.handleDuplicateEvent2);
+      expect(handlers).toHaveProperty('player:died');
+      expect(handlers['player:died']).toHaveLength(2);
+      expect(handlers['player:died']).toContain(instance.handleDuplicateEvent1);
+      expect(handlers['player:died']).toContain(instance.handleDuplicateEvent2);
     });
   });
 });

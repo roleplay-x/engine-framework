@@ -75,7 +75,6 @@ export function createErrorHandler<C extends RPServerContext>(context: C) {
       return;
     }
 
-    // Default to 500 for unknown errors
     reply.status(500).send({
       key: 'INTERNAL_SERVER_ERROR',
       message: 'An unexpected error occurred',

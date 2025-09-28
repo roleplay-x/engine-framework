@@ -46,9 +46,9 @@ describe('EventService Hooks', () => {
       platformAdapter: mockPlatformAdapter,
       hookBus: mockHookBus,
     } as any;
-    
+
     eventService = new EventService(mockContext);
-    
+
     await eventService.init();
   });
 
@@ -59,26 +59,35 @@ describe('EventService Hooks', () => {
   describe('Hook Integration', () => {
     it('should call hookBus.trigger for client events', () => {
       const eventHandler = jest.fn();
-      
+
       eventService.on('testEvent', eventHandler);
 
-      expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith('testEvent', expect.any(Function));
+      expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith(
+        'testEvent',
+        expect.any(Function),
+      );
     });
 
     it('should call hookBus.trigger for server events', () => {
       const eventHandler = jest.fn();
-      
+
       eventService.onServerEvent('testServerEvent', eventHandler);
 
-      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith('testServerEvent', expect.any(Function));
+      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
+        'testServerEvent',
+        expect.any(Function),
+      );
     });
 
     it('should call hookBus.trigger for game events', () => {
       const eventHandler = jest.fn();
-      
+
       eventService.onGameEvent('entityDamage', eventHandler);
 
-      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith('entityDamage', expect.any(Function));
+      expect(mockPlatformAdapter.network.onGameEvent).toHaveBeenCalledWith(
+        'entityDamage',
+        expect.any(Function),
+      );
     });
   });
 
@@ -86,7 +95,7 @@ describe('EventService Hooks', () => {
     it('should execute beforeClientEvent hook', async () => {
       const beforeHook = jest.fn();
       const eventHandler = jest.fn();
-      
+
       mockHookBus.run.mockImplementation(async (hookName: string, data: any) => {
         if (hookName === 'beforeClientEvent') {
           beforeHook(data);
@@ -105,7 +114,7 @@ describe('EventService Hooks', () => {
           data: ['testData'],
           preventDefault: expect.any(Function),
           stopPropagation: expect.any(Function),
-        })
+        }),
       );
       expect(eventHandler).toHaveBeenCalledWith('testData');
     });
@@ -113,7 +122,7 @@ describe('EventService Hooks', () => {
     it('should execute afterClientEvent hook', async () => {
       const afterHook = jest.fn();
       const eventHandler = jest.fn();
-      
+
       mockHookBus.run.mockImplementation(async (hookName: string, data: any) => {
         if (hookName === 'afterClientEvent') {
           afterHook(data);
@@ -132,14 +141,14 @@ describe('EventService Hooks', () => {
           data: ['testData'],
           preventDefault: expect.any(Function),
           stopPropagation: expect.any(Function),
-        })
+        }),
       );
       expect(eventHandler).toHaveBeenCalledWith('testData');
     });
 
     it('should prevent event execution when preventDefault is called', async () => {
       const eventHandler = jest.fn();
-      
+
       mockHookBus.run.mockImplementation(async (hookName: string, data: any) => {
         if (hookName === 'beforeClientEvent') {
           data.preventDefault();
@@ -157,7 +166,7 @@ describe('EventService Hooks', () => {
 
     it('should stop propagation when stopPropagation is called', async () => {
       const eventHandler = jest.fn();
-      
+
       mockHookBus.run.mockImplementation(async (hookName: string, data: any) => {
         if (hookName === 'beforeClientEvent') {
           data.stopPropagation();
@@ -178,7 +187,7 @@ describe('EventService Hooks', () => {
     it('should handle hook errors gracefully', async () => {
       const eventHandler = jest.fn();
       const errorSpy = jest.spyOn(mockLogger, 'error');
-      
+
       mockHookBus.run.mockRejectedValue(new Error('Hook error'));
 
       eventService.on('testEvent', eventHandler);
@@ -187,7 +196,10 @@ describe('EventService Hooks', () => {
       await wrappedHandler('testData');
 
       expect(eventHandler).toHaveBeenCalledWith('testData');
-      expect(errorSpy).toHaveBeenCalledWith('Error executing hook beforeClientEvent:', expect.any(Error));
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Error executing hook beforeClientEvent:',
+        expect.any(Error),
+      );
     });
 
     it('should handle event handler errors gracefully', async () => {
@@ -195,13 +207,16 @@ describe('EventService Hooks', () => {
         throw new Error('Handler error');
       });
       const errorSpy = jest.spyOn(mockLogger, 'error');
-      
+
       eventService.on('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
 
-      expect(errorSpy).toHaveBeenCalledWith("Error in event handler for 'testEvent':", expect.any(Error));
+      expect(errorSpy).toHaveBeenCalledWith(
+        "Error in event handler for 'testEvent':",
+        expect.any(Error),
+      );
     });
   });
 });

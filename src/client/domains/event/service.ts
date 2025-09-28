@@ -1,11 +1,11 @@
 import { RPClientService } from '../../core/client-service';
 import { GameEventName, GameEventArgs } from '../../natives/events/game-events';
 import { ClientTypes } from '../../core/types';
-import { 
-  ClientEventHookData, 
-  ServerEventHookData, 
+import {
+  ClientEventHookData,
+  ServerEventHookData,
   GameEventHookData,
-  RPClientHooks
+  RPClientHooks,
 } from '../../core/hooks/hooks';
 import { RPHookBus } from '../../../core/bus/hook-bus';
 
@@ -27,10 +27,10 @@ import { RPHookBus } from '../../../core/bus/hook-bus';
  * eventService.onServerEvent('playerSpawned', (data) => {
  *   console.log('Player spawned:', data);
  * });
- * 
+ *
  * // Emit events to server
  * eventService.emitToServer('requestSpawn', { position: { x: 0, y: 0, z: 0 } });
- * 
+ *
  * // Listen for game events with type safety
  * eventService.onGameEvent('entityDamage', (victim, attacker, weaponHash, damage) => {
  *   console.log(`Entity ${victim} took ${damage} damage from ${attacker}`);
@@ -175,7 +175,7 @@ export class EventService extends RPClientService<ClientTypes> {
    */
   public onGameEvent<T extends GameEventName>(
     event: T,
-    handler: (...args: GameEventArgs<T>) => void
+    handler: (...args: GameEventArgs<T>) => void,
   ): void {
     const wrappedHandler = async (...args: GameEventArgs<T>) => {
       const shouldContinue = await this.executeGameEventHooks(event, args, 'before');
@@ -203,7 +203,7 @@ export class EventService extends RPClientService<ClientTypes> {
    */
   public offGameEvent<T extends GameEventName>(
     event: T,
-    handler: (...args: GameEventArgs<T>) => void
+    handler: (...args: GameEventArgs<T>) => void,
   ): void {
     this.platformAdapter.network.offGameEvent(event, handler);
   }
@@ -256,13 +256,10 @@ export class EventService extends RPClientService<ClientTypes> {
    * @param hookData - Data to pass to the hook
    * @private
    */
-  private async executeHook(
-    hookName: keyof RPClientHooks,
-    hookData: any
-  ): Promise<void> {
+  private async executeHook(hookName: keyof RPClientHooks, hookData: any): Promise<void> {
     try {
       const hookBus = this.hookBus as RPHookBus<RPClientHooks>;
-      
+
       await hookBus.run(hookName, hookData as never);
     } catch (error) {
       this.logger.error(`Error executing hook ${String(hookName)}:`, error);
@@ -279,22 +276,30 @@ export class EventService extends RPClientService<ClientTypes> {
    * @private
    */
   private async executeClientEventHooks(
-    event: string, 
-    data: any, 
-    phase: 'before' | 'after'
+    event: string,
+    data: any,
+    phase: 'before' | 'after',
   ): Promise<boolean> {
     const hookData: ClientEventHookData = {
       event,
       data,
-      preventDefault: () => { /* Will be set by hook system */ },
-      stopPropagation: () => { /* Will be set by hook system */ }
+      preventDefault: () => {
+        /* Will be set by hook system */
+      },
+      stopPropagation: () => {
+        /* Will be set by hook system */
+      },
     };
 
     let shouldContinue = true;
     let shouldStopPropagation = false;
 
-    hookData.preventDefault = () => { shouldContinue = false; };
-    hookData.stopPropagation = () => { shouldStopPropagation = true; };
+    hookData.preventDefault = () => {
+      shouldContinue = false;
+    };
+    hookData.stopPropagation = () => {
+      shouldStopPropagation = true;
+    };
 
     try {
       if (phase === 'before') {
@@ -321,22 +326,30 @@ export class EventService extends RPClientService<ClientTypes> {
    * @private
    */
   private async executeServerEventHooks(
-    event: string, 
-    data: any, 
-    phase: 'before' | 'after'
+    event: string,
+    data: any,
+    phase: 'before' | 'after',
   ): Promise<boolean> {
     const hookData: ServerEventHookData = {
       event,
       data,
-      preventDefault: () => { /* Will be set by hook system */ },
-      stopPropagation: () => { /* Will be set by hook system */ }
+      preventDefault: () => {
+        /* Will be set by hook system */
+      },
+      stopPropagation: () => {
+        /* Will be set by hook system */
+      },
     };
 
     let shouldContinue = true;
     let shouldStopPropagation = false;
 
-    hookData.preventDefault = () => { shouldContinue = false; };
-    hookData.stopPropagation = () => { shouldStopPropagation = true; };
+    hookData.preventDefault = () => {
+      shouldContinue = false;
+    };
+    hookData.stopPropagation = () => {
+      shouldStopPropagation = true;
+    };
 
     try {
       if (phase === 'before') {
@@ -363,22 +376,30 @@ export class EventService extends RPClientService<ClientTypes> {
    * @private
    */
   private async executeGameEventHooks<T extends GameEventName>(
-    event: T, 
-    args: GameEventArgs<T>, 
-    phase: 'before' | 'after'
+    event: T,
+    args: GameEventArgs<T>,
+    phase: 'before' | 'after',
   ): Promise<boolean> {
     const hookData: GameEventHookData<T> = {
       event,
       args,
-      preventDefault: () => { /* Will be set by hook system */ },
-      stopPropagation: () => { /* Will be set by hook system */ }
+      preventDefault: () => {
+        /* Will be set by hook system */
+      },
+      stopPropagation: () => {
+        /* Will be set by hook system */
+      },
     };
 
     let shouldContinue = true;
     let shouldStopPropagation = false;
 
-    hookData.preventDefault = () => { shouldContinue = false; };
-    hookData.stopPropagation = () => { shouldStopPropagation = true; };
+    hookData.preventDefault = () => {
+      shouldContinue = false;
+    };
+    hookData.stopPropagation = () => {
+      shouldStopPropagation = true;
+    };
 
     try {
       if (phase === 'before') {

@@ -7,9 +7,7 @@ import { CustomClientContextOptions, IServiceContext } from './types';
 import { RPClientService } from './client-service';
 
 /** Configuration options for creating a client context */
-export interface RPClientContextOptions<
-  THooks extends RPClientHooks = RPClientHooks,
-> {
+export interface RPClientContextOptions<THooks extends RPClientHooks = RPClientHooks> {
   /** Hook bus for client hooks */
   hookBus: RPHookBus<THooks>;
   /** Logger instance */
@@ -22,10 +20,7 @@ export interface RPClientContextOptions<
 export type RPClientContextCtor<
   TOptions extends CustomClientContextOptions = CustomClientContextOptions,
   THooks extends RPClientHooks = RPClientHooks,
-  TContext extends RPClientContext<TOptions, THooks> = RPClientContext<
-    TOptions,
-    THooks
-  >,
+  TContext extends RPClientContext<TOptions, THooks> = RPClientContext<TOptions, THooks>,
 > = new (options: RPClientContextOptions<THooks> & TOptions) => TContext;
 
 /**
@@ -141,14 +136,13 @@ export class RPClientContext<
   public static create<
     TOptions extends CustomClientContextOptions = CustomClientContextOptions,
     THooks extends RPClientHooks = RPClientHooks,
-    TContext extends RPClientContext<TOptions, THooks> = RPClientContext<
-      TOptions,
-      THooks
-    >,
-  >(ctor: RPClientContextCtor<TOptions, THooks, TContext>, options: RPClientContextOptions<THooks> & TOptions): TContext {
+    TContext extends RPClientContext<TOptions, THooks> = RPClientContext<TOptions, THooks>,
+  >(
+    ctor: RPClientContextCtor<TOptions, THooks, TContext>,
+    options: RPClientContextOptions<THooks> & TOptions,
+  ): TContext {
     return new ctor(options);
   }
-
 
   /**
    * Gets a service instance by its constructor.
@@ -167,7 +161,9 @@ export class RPClientContext<
    * const player = await playerService.getPlayer();
    * ```
    */
-  public getService<T extends new (...args: any[]) => RPClientService>(serviceCtor: T): InstanceType<T> {
+  public getService<T extends new (...args: any[]) => RPClientService>(
+    serviceCtor: T,
+  ): InstanceType<T> {
     if (!this.services.has(serviceCtor)) {
       const service = new serviceCtor(this);
       this.services.set(serviceCtor, service);
@@ -216,7 +212,7 @@ export class RPClientContext<
    * context
    *   .addService(PlayerService)
    *   .addService(WorldService);
-   * 
+   *
    * await context.init();
    * console.log('All services initialized');
    * ```

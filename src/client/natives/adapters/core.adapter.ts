@@ -1,4 +1,4 @@
-import { Vector3 } from "../../../shared";
+import { Vector3 } from '../../../shared';
 
 export interface IClientLogger {
   debug(message: string, ...args: any[]): void;
@@ -26,4 +26,14 @@ export interface ICoreAdapter {
   isScreenFaded(fadeIn: boolean): boolean;
   shutdownLoadingScreen(): void;
   isGameplayCamRendering(): boolean;
+
+  // Game state
+  isGamePaused(): boolean;
+  setGamePaused(paused: boolean): void;
+  getGameTime(): number;
+
+  // HUD & UI
+  displayHud(display: boolean): void;
+  displayRadar(display: boolean): void;
+  isHudHidden(): boolean;
 }

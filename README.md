@@ -455,6 +455,631 @@ export class GameController extends ApiController {
 server.registerController(GameController);
 ```
 
+## Platform Adapters
+
+The framework uses platform adapters to abstract game engine specific functionality. Here are examples for both client and server platforms:
+
+## Server Platform Adapters
+
+### Example Server Platform Adapter
+
+```typescript
+import { 
+  PlatformAdapter, 
+  IPlayerAdapter, 
+  INetworkAdapter, 
+  ICoreAdapter,
+  IEventAdapter
+} from '@roleplayx/engine-framework';
+import { Vector3 } from '@roleplayx/engine-framework/shared';
+
+// Server Player Adapter
+export class ServerPlayerAdapter implements IPlayerAdapter {
+  private core: ICoreAdapter;
+
+  constructor(core: ICoreAdapter) {
+    this.core = core;
+  }
+
+  getPlayerId(): string {
+    return GetPlayerServerId(PlayerId()).toString();
+  }
+
+  getCurrentPlayerId(): string {
+    return GetPlayerServerId(PlayerId()).toString();
+  }
+
+  getPlayerName(playerId: string): string {
+    return GetPlayerName(parseInt(playerId));
+  }
+
+  getPlayerIP(playerId: string): string {
+    return GetPlayerEndpoint(parseInt(playerId));
+  }
+
+  kickPlayer(playerId: string, reason: string): void {
+    DropPlayer(parseInt(playerId), reason);
+  }
+
+  getPlayerPosition(playerId: string): Vector3 {
+    const ped = GetPlayerPed(GetPlayerFromServerId(parseInt(playerId)));
+    const coords = GetEntityCoords(ped, false);
+    return new Vector3(coords[0], coords[1], coords[2]);
+  }
+
+  setPlayerPosition(playerId: string, position: Vector3): void {
+    const ped = GetPlayerPed(GetPlayerFromServerId(parseInt(playerId)));
+    SetEntityCoords(ped, position.x, position.y, position.z, false, false, false, true);
+  }
+
+  getPlayerHealth(playerId: string): number {
+    const ped = GetPlayerPed(GetPlayerFromServerId(parseInt(playerId)));
+    return GetEntityHealth(ped);
+  }
+}
+
+// Server Network Adapter
+export class ServerNetworkAdapter implements INetworkAdapter {
+  private core: ICoreAdapter;
+
+  constructor(core: ICoreAdapter) {
+    this.core = core;
+  }
+
+  emitToPlayer(playerId: string, event: string, ...args: any[]): void {
+    this.core.logger.debug('Emitting to player', { playerId, event });
+    TriggerClientEvent(event, parseInt(playerId), ...args);
+  }
+
+  emitToAll(event: string, ...args: any[]): void {
+    this.core.logger.debug('Emitting to all players', { event });
+    TriggerClientEvent(event, -1, ...args);
+  }
+
+  onClientEvent(event: string, handler: (playerId: string, ...args: any[]) => void): void {
+    this.core.logger.debug('Registering client event handler', { event });
+    on(event, (source: number, ...args: any[]) => {
+      handler(source.toString(), ...args);
+    });
+  }
+
+  emitToClient(playerId: string, event: string, ...args: any[]): void {
+    this.core.logger.debug('Emitting to client', { playerId, event });
+    TriggerClientEvent(event, parseInt(playerId), ...args);
+  }
+
+  broadcastToClients(event: string, ...args: any[]): void {
+    this.core.logger.debug('Broadcasting to all clients', { event });
+    TriggerClientEvent(event, -1, ...args);
+  }
+}
+
+// Server Core Adapter
+export class ServerCoreAdapter implements ICoreAdapter {
+  readonly logger = console;
+
+  getMaxPlayers(): number {
+    return GetConvarInt('sv_maxclients', 32);
+  }
+
+  getPlayerCount(): number {
+    return GetNumPlayerIndices();
+  }
+
+  log(message: string): void {
+    console.log(`[SERVER] ${message}`);
+  }
+}
+
+// Main Server Platform Adapter
+export class ServerPlatformAdapter extends PlatformAdapter {
+  readonly core = new ServerCoreAdapter();
+  readonly player: ServerPlayerAdapter;
+  readonly events: IEventAdapter; // Server doesn't have events adapter yet
+  readonly network: ServerNetworkAdapter;
+
+  constructor() {
+    super();
+    this.player = new ServerPlayerAdapter(this.core);
+    this.network = new ServerNetworkAdapter(this.core);
+    // this.events will be implemented when needed
+  }
+}
+```
+
+## Client Platform Adapters
+
+Here are examples for different platforms:
+
+### Example Platform Adapter
+
+```typescript
+import { 
+  ClientPlatformAdapter, 
+  IPlayerAdapter, 
+  ICameraAdapter, 
+  INetworkAdapter, 
+  ICoreAdapter 
+} from '@roleplayx/engine-framework';
+import { Vector3 } from '@roleplayx/engine-framework/shared';
+
+// Player Adapter
+export class PlayerAdapter implements IPlayerAdapter {
+  getPlayerId(): string {
+    return PlayerId().toString();
+  }
+
+  getPlayerPed(): number {
+    return PlayerPedId();
+  }
+
+  async setPlayerModel(model: string | number): Promise<void> {
+    const modelHash = typeof model === 'string' ? GetHashKey(model) : model;
+    await this.requestModel(modelHash);
+    SetPlayerModel(this.getPlayerId(), modelHash);
+  }
+
+  setEntityPosition(entity: number, position: Vector3, offset: boolean = false): void {
+    if (offset) {
+      SetEntityCoords(entity, position.x, position.y, position.z, false, false, false, true);
+    } else {
+      SetEntityCoordsNoOffset(entity, position.x, position.y, position.z, false, false, false);
+    }
+  }
+
+  setEntityHeading(entity: number, heading: number): void {
+    SetEntityHeading(entity, heading);
+  }
+
+  setPlayerControl(enable: boolean, flags: number = 0): void {
+    SetPlayerControl(this.getPlayerId(), enable, flags);
+  }
+
+  setPlayerHealth(health: number): void {
+    SetEntityHealth(this.getPlayerPed(), health);
+  }
+
+  getPlayerHealth(): number {
+    return GetEntityHealth(this.getPlayerPed());
+  }
+
+  private async requestModel(modelHash: number): Promise<void> {
+    RequestModel(modelHash);
+    while (!HasModelLoaded(modelHash)) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+}
+
+// Camera Adapter
+export class CameraAdapter implements ICameraAdapter {
+  createCamera(type?: string): number {
+    return CreateCam(type || 'DEFAULT_SCRIPTED_CAMERA', true);
+  }
+
+  destroyCamera(camera: number, destroyImmediately: boolean = false): void {
+    if (destroyImmediately) {
+      DestroyCam(camera, false);
+    } else {
+      DestroyCam(camera, true);
+    }
+  }
+
+  setCameraActive(camera: number, active: boolean): void {
+    SetCamActive(camera, active);
+  }
+
+  setCameraCoord(camera: number, position: Vector3): void {
+    SetCamCoord(camera, position.x, position.y, position.z);
+  }
+
+  setCameraRotation(camera: number, rotation: Vector3, rotationOrder: number = 2): void {
+    SetCamRot(camera, rotation.x, rotation.y, rotation.z, rotationOrder);
+  }
+
+  setCameraFov(camera: number, fov: number): void {
+    SetCamFov(camera, fov);
+  }
+
+  pointCameraAtCoord(camera: number, position: Vector3): void {
+    PointCamAtCoord(camera, position.x, position.y, position.z);
+  }
+
+  pointCameraAtEntity(camera: number, entity: number, offsetX: number = 0, offsetY: number = 0, offsetZ: number = 0, p5: boolean = true): void {
+    PointCamAtEntity(camera, entity, offsetX, offsetY, offsetZ, p5);
+  }
+
+  attachCameraToEntity(camera: number, entity: number, offsetX: number, offsetY: number, offsetZ: number, isRelative: boolean): void {
+    AttachCamToEntity(camera, entity, offsetX, offsetY, offsetZ, isRelative);
+  }
+
+  detachCamera(camera: number): void {
+    DetachCam(camera);
+  }
+
+  isCameraActive(camera: number): boolean {
+    return IsCamActive(camera);
+  }
+
+  getCameraCoord(camera: number): Vector3 {
+    const coords = GetCamCoord(camera);
+    return new Vector3(coords[0], coords[1], coords[2]);
+  }
+
+  getCameraRotation(camera: number): Vector3 {
+    const rot = GetCamRot(camera, 2);
+    return new Vector3(rot[0], rot[1], rot[2]);
+  }
+
+  getCameraFov(camera: number): number {
+    return GetCamFov(camera);
+  }
+
+  renderScriptCameras(render: boolean, ease: boolean, easeTime: number, p3: boolean, p4: boolean): void {
+    RenderScriptCams(render, ease, easeTime, p3, p4);
+  }
+}
+
+// Core Adapter
+export class CoreAdapter implements ICoreAdapter {
+  readonly logger = console;
+
+  async wait(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  getGameTimer(): number {
+    return GetGameTimer();
+  }
+
+  getHashKey(str: string): number {
+    return GetHashKey(str);
+  }
+
+  async fadeScreen(fadeIn: boolean, duration: number): Promise<void> {
+    DoScreenFadeOut(0);
+    await this.wait(duration);
+    if (fadeIn) {
+      DoScreenFadeIn(duration);
+    }
+  }
+
+  isScreenFaded(fadeIn: boolean): boolean {
+    return IsScreenFadedIn() === fadeIn;
+  }
+
+  shutdownLoadingScreen(): void {
+    ShutdownLoadingScreen();
+  }
+
+  isGameplayCamRendering(): boolean {
+    return IsGameplayCamRendering();
+  }
+
+  displayHud(display: boolean): void {
+    DisplayHud(display);
+  }
+
+  displayRadar(display: boolean): void {
+    DisplayRadar(display);
+  }
+
+  isHudHidden(): boolean {
+    return IsHudHidden();
+  }
+
+  isGamePaused(): boolean {
+    return IsPauseMenuActive();
+  }
+
+  setGamePaused(paused: boolean): void {
+    SetPauseMenuActive(paused);
+  }
+
+  getGameTime(): number {
+    return GetClockHours() * 3600 + GetClockMinutes() * 60 + GetClockSeconds();
+  }
+
+  requestCollision(position: Vector3): void {
+    RequestCollisionAtCoord(position.x, position.y, position.z);
+  }
+
+  hasCollisionLoadedAroundEntity(entity: number): boolean {
+    return HasCollisionLoadedAroundEntity(entity);
+  }
+
+  async requestModel(model: string | number): Promise<void> {
+    const modelHash = typeof model === 'string' ? this.getHashKey(model) : model;
+    RequestModel(modelHash);
+    while (!HasModelLoaded(modelHash)) {
+      await this.wait(0);
+    }
+  }
+
+  setModelAsNoLongerNeeded(model: string | number): void {
+    const modelHash = typeof model === 'string' ? this.getHashKey(model) : model;
+    SetModelAsNoLongerNeeded(modelHash);
+  }
+}
+
+// Network Adapter
+export class NetworkAdapter implements INetworkAdapter {
+  private core: CoreAdapter;
+  private gameEventHandlers = new Map<string, (...args: any[]) => void>();
+
+  // Platform-specific event mapping
+  private static readonly EventMapping: Record<GameEventName, string> = {
+    'entityDamage': 'CEventNetworkEntityDamage',
+  };
+
+  constructor(core: CoreAdapter) {
+    this.core = core;
+    this.setupGameEventListener();
+  }
+
+  private setupGameEventListener(): void {
+    on('gameEventTriggered', (name: string, args: any[]) => {
+      const handler = this.gameEventHandlers.get(name);
+      if (handler) {
+        handler(...args);
+      }
+    });
+  }
+
+  onServerEvent(event: string, handler: (...args: any[]) => void): void {
+    this.core.logger.debug('Registering server event handler', { event });
+    onNet(event, handler);
+  }
+
+  emitToServer(event: string, ...args: any[]): void {
+    emitNet(event, ...args);
+  }
+
+  on(event: string, handler: (...args: any[]) => void): void {
+    on(event, handler);
+  }
+
+  off(event: string, handler: (...args: any[]) => void): void {
+    removeEventListener(event, handler);
+  }
+
+  once(event: string, handler: (...args: any[]) => void): void {
+    on(event, handler);
+  }
+
+  emit(event: string, ...args: any[]): void {
+    emit(event, ...args);
+  }
+
+  removeAllListeners(event?: string): void {
+    if (event) {
+      this.gameEventHandlers.delete(event);
+    } else {
+      this.gameEventHandlers.clear();
+    }
+  }
+
+  listenerCount(event: string): number {
+    return this.gameEventHandlers.get(event) ? 1 : 0;
+  }
+
+  onGameEvent<T extends GameEventName>(
+    event: T, 
+    handler: (...args: GameEventArgs<T>) => void
+  ): void {
+    const platformEvent = NetworkAdapter.EventMapping[event];
+    if (!platformEvent) {
+      this.core.logger.error(`Game event '${event}' not mapped for platform`);
+      return;
+    }
+
+    this.core.logger.debug('Registering game event handler', { 
+      unifiedEvent: event, 
+      platformEvent 
+    });
+
+    this.gameEventHandlers.set(platformEvent, handler);
+  }
+
+  offGameEvent<T extends GameEventName>(
+    event: T, 
+    handler: (...args: GameEventArgs<T>) => void
+  ): void {
+    const platformEvent = NetworkAdapter.EventMapping[event];
+    if (platformEvent) {
+      this.gameEventHandlers.delete(platformEvent);
+    }
+  }
+
+  mapPlatformEvent(platformEvent: string, gameEvent: GameEventName): void {
+    // Store custom mapping for later use
+    (NetworkAdapter.EventMapping as any)[gameEvent] = platformEvent;
+  }
+
+  unmapPlatformEvent(platformEvent: string): void {
+    // Remove custom mapping
+    for (const [key, value] of Object.entries(NetworkAdapter.EventMapping)) {
+      if (value === platformEvent) {
+        delete (NetworkAdapter.EventMapping as any)[key];
+        break;
+      }
+    }
+  }
+
+  getMappedGameEvent(platformEvent: string): GameEventName | null {
+    for (const [gameEvent, mappedEvent] of Object.entries(NetworkAdapter.EventMapping)) {
+      if (mappedEvent === platformEvent) {
+        return gameEvent as GameEventName;
+      }
+    }
+    return null;
+  }
+
+  isConnected(): boolean {
+    return NetworkIsPlayerConnected(PlayerId());
+  }
+
+  getServerId(): string {
+    return GetPlayerServerId(PlayerId()).toString();
+  }
+
+  getPlayerCount(): number {
+    return GetNumberOfPlayers();
+  }
+}
+
+// Main Platform Adapter
+export class PlatformAdapter extends ClientPlatformAdapter {
+  readonly core = new CoreAdapter();
+  readonly player = new PlayerAdapter();
+  readonly network: NetworkAdapter;
+  readonly camera = new CameraAdapter();
+
+  constructor() {
+    super();
+    this.network = new NetworkAdapter(this.core);
+  }
+}
+```
+
+### Alternative Platform Adapter
+
+```typescript
+// Player Adapter
+export class PlayerAdapter implements IPlayerAdapter {
+  getPlayerId(): string {
+    return mp.players.local.remoteId.toString();
+  }
+
+  getPlayerPed(): number {
+    return mp.players.local.handle;
+  }
+
+  async setPlayerModel(model: string | number): Promise<void> {
+    const modelHash = typeof model === 'string' ? mp.joaat(model) : model;
+    mp.players.local.model = modelHash;
+  }
+
+  setEntityPosition(entity: number, position: Vector3, offset: boolean = false): void {
+    const rageEntity = mp.entities.atHandle(entity);
+    if (rageEntity) {
+      rageEntity.position = new mp.Vector3(position.x, position.y, position.z);
+    }
+  }
+
+  setEntityHeading(entity: number, heading: number): void {
+    const rageEntity = mp.entities.atHandle(entity);
+    if (rageEntity) {
+      rageEntity.heading = heading;
+    }
+  }
+
+  setPlayerControl(enable: boolean, flags: number = 0): void {
+    mp.players.local.freezePosition(!enable);
+  }
+
+  setPlayerHealth(health: number): void {
+    mp.players.local.health = health;
+  }
+
+  getPlayerHealth(): number {
+    return mp.players.local.health;
+  }
+}
+
+// Core Adapter
+export class CoreAdapter implements ICoreAdapter {
+  readonly logger = console;
+
+  async wait(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  getGameTimer(): number {
+    return Date.now();
+  }
+
+  getHashKey(str: string): number {
+    return mp.joaat(str);
+  }
+
+  async fadeScreen(fadeIn: boolean, duration: number): Promise<void> {
+    mp.game.graphics.transitionToBlurred(duration);
+    await this.wait(duration);
+    if (fadeIn) {
+      mp.game.graphics.transitionFromBlurred(duration);
+    }
+  }
+
+  displayHud(display: boolean): void {
+    mp.game.ui.displayHud(display);
+  }
+
+  displayRadar(display: boolean): void {
+    mp.game.ui.displayRadar(display);
+  }
+
+  isHudHidden(): boolean {
+    return !mp.game.ui.isHudComponentActive(0);
+  }
+
+  // ... other methods
+}
+
+// Main Platform Adapter
+export class PlatformAdapter extends ClientPlatformAdapter {
+  readonly core = new CoreAdapter();
+  readonly player = new PlayerAdapter();
+  readonly network: NetworkAdapter;
+  readonly camera = new CameraAdapter();
+
+  constructor() {
+    super();
+    this.network = new NetworkAdapter(this.core);
+  }
+}
+```
+
+### Client Usage Example
+
+```typescript
+import { RPClient } from '@roleplayx/engine-framework';
+import { PlatformAdapter } from './adapters/platform-adapter';
+
+// Create platform adapter
+const platformAdapter = new PlatformAdapter();
+
+// Create client with platform adapter
+const client = RPClient.create({
+  // client options
+}, {
+  // natives
+}, platformAdapter);
+
+// Start the client
+await client.start();
+```
+
+### Server Usage Example
+
+```typescript
+import { RPServer } from '@roleplayx/engine-framework';
+import { ServerPlatformAdapter } from './adapters/server-platform-adapter';
+
+// Create server platform adapter
+const platformAdapter = new ServerPlatformAdapter();
+
+// Create server with platform adapter
+const server = RPServer.create({
+  // server options
+}, {
+  // natives
+}, platformAdapter);
+
+// Start the server
+await server.start();
+```
+
 ## Development
 
 ```bash

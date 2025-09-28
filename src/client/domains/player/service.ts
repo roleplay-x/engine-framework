@@ -1,5 +1,6 @@
 import { RPClientService } from '../../core/client-service';
-import { OnClient, OnServer, OnGameEvent } from '../../core/events/decorators';
+import { OnClient, OnServer } from '../../core/events/decorators';
+import { RPAllClientEvents, RPServerToClientEvents } from '../../core/events/types';
 import { ClientTypes } from '../../core/types';
 
 /**
@@ -250,8 +251,8 @@ export class PlayerService extends RPClientService<ClientTypes> {
    *
    * @param data - Player spawn data
    */
-  @OnClient('playerSpawned')
-  private onPlayerSpawned(data: any): void {
+  @OnClient('player:spawned')
+  private onPlayerSpawned(data: RPAllClientEvents['player:spawned']): void {
     this.logger.info('Player spawned:', data);
     this.currentPlayer = data;
     this.playerHealth = 100;
@@ -262,8 +263,8 @@ export class PlayerService extends RPClientService<ClientTypes> {
    *
    * @param data - Player death data
    */
-  @OnClient('playerDied')
-  private onPlayerDied(data: any): void {
+  @OnClient('player:died')
+  private onPlayerDied(data: RPAllClientEvents['player:died']): void {
     this.logger.info('Player died:', data);
     this.playerHealth = 0;
   }
@@ -274,7 +275,7 @@ export class PlayerService extends RPClientService<ClientTypes> {
    * @param data - Player join data
    */
   @OnServer('playerJoined')
-  private onPlayerJoined(data: any): void {
+  private onPlayerJoined(data: RPServerToClientEvents['playerJoined']): void {
     this.logger.info('Player joined server:', data);
   }
 
@@ -284,49 +285,7 @@ export class PlayerService extends RPClientService<ClientTypes> {
    * @param data - Player leave data
    */
   @OnServer('playerLeft')
-  private onPlayerLeft(data: any): void {
+  private onPlayerLeft(data: RPServerToClientEvents['playerLeft']): void {
     this.logger.info('Player left server:', data);
-  }
-
-  /**
-   * Handles game entity damage event.
-   *
-   * @param victim - Victim entity ID
-   * @param attacker - Attacker entity ID
-   * @param weaponHash - Weapon hash
-   * @param damage - Damage amount
-   */
-  @OnGameEvent('entityDamage')
-  private onEntityDamage(victim: number, attacker: number, weaponHash: number, damage: number): void {
-    this.logger.info(`Entity ${victim} took ${damage} damage from ${attacker} with weapon ${weaponHash}`);
-    
-    if (this.currentPlayer && this.currentPlayer.id === victim) {
-      this.playerHealth = Math.max(0, this.playerHealth - damage);
-      this.logger.info(`Player health reduced to: ${this.playerHealth}`);
-    }
-  }
-
-  /**
-   * Handles game vehicle entered event.
-   *
-   * @param playerId - Player ID
-   * @param vehicleId - Vehicle ID
-   * @param seat - Seat number
-   */
-  @OnGameEvent('vehicleEntered')
-  private onVehicleEntered(playerId: number, vehicleId: number, seat: number): void {
-    this.logger.info(`Player ${playerId} entered vehicle ${vehicleId} in seat ${seat}`);
-  }
-
-  /**
-   * Handles game vehicle exited event.
-   *
-   * @param playerId - Player ID
-   * @param vehicleId - Vehicle ID
-   * @param seat - Seat number
-   */
-  @OnGameEvent('vehicleExited')
-  private onVehicleExited(playerId: number, vehicleId: number, seat: number): void {
-    this.logger.info(`Player ${playerId} exited vehicle ${vehicleId} from seat ${seat}`);
   }
 }

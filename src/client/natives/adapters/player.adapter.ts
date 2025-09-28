@@ -1,4 +1,4 @@
-import { Vector3 } from '@roleplayx/engine-framework/shared';
+import { Vector3 } from '../../../shared';
 
 export interface IPlayerAdapter {
   // Player related
@@ -22,11 +22,7 @@ export interface IPlayerAdapter {
   setEntityPosition(entity: number, position: Vector3, offset?: boolean): void;
   setEntityHeading(entity: number, heading: number): void;
   setEntityVisible(entity: number, visible: boolean): void;
-  setEntityCollision(
-    entity: number,
-    collision: boolean,
-    keepPhysics?: boolean,
-  ): void;
+  setEntityCollision(entity: number, collision: boolean, keepPhysics?: boolean): void;
   freezeEntityPosition(entity: number, freeze: boolean): void;
   getEntityCoords(entity: number): Vector3;
   isEntityVisible(entity: number): boolean;

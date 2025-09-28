@@ -7,6 +7,9 @@ import { CustomClientContextOptions } from './types';
 import { RPClientContext, RPClientContextCtor, RPClientContextOptions } from './context';
 import { EventService } from '../domains/event/service';
 import { PlayerService } from '../domains/player/service';
+import { HealthService } from '../domains/health/service';
+import { SpawnService } from '../domains/spawn/service';
+import { CameraService } from '../domains/camera/service';
 
 /** Configuration options for creating a roleplay client instance */
 export interface RPClientOptions {
@@ -45,12 +48,12 @@ export interface RPClientNatives<
  *
  * @example
  * ```typescript
-   * // Create and configure the client
-   * const client = RPClient.create({
-   *   clientId: 'my-roleplay-client'
-   * }, {
-   *   platformAdapter: new MyPlatformAdapter()
-   * });
+ * // Create and configure the client
+ * const client = RPClient.create({
+ *   clientId: 'my-roleplay-client'
+ * }, {
+ *   platformAdapter: new MyPlatformAdapter()
+ * });
  *
  * // Start the client
  * await client.start();
@@ -80,7 +83,11 @@ export class RPClient {
    * @param options - Client configuration options
    * @param natives - Native integrations and adapters
    */
-  private constructor(options: RPClientOptions, natives: RPClientNatives, platformAdapter: ClientPlatformAdapter) {
+  private constructor(
+    options: RPClientOptions,
+    natives: RPClientNatives,
+    platformAdapter: ClientPlatformAdapter,
+  ) {
     const logger = options.logger ?? defaultLogger;
     const hookBus = new RPHookBus<RPClientHooks>();
 
@@ -94,9 +101,12 @@ export class RPClient {
     };
 
     this.context = RPClientContext.create(contextType, contextOptions);
-    
+
     this.context.addService(EventService);
     this.context.addService(PlayerService);
+    this.context.addService(HealthService);
+    this.context.addService(SpawnService);
+    this.context.addService(CameraService);
   }
 
   /**
@@ -122,7 +132,11 @@ export class RPClient {
   public static create<
     TOptions extends CustomClientContextOptions = CustomClientContextOptions,
     THooks extends RPClientHooks = RPClientHooks,
-  >(config: RPClientOptions, natives: RPClientNatives<TOptions, THooks>, platformAdapter: ClientPlatformAdapter): RPClient {
+  >(
+    config: RPClientOptions,
+    natives: RPClientNatives<TOptions, THooks>,
+    platformAdapter: ClientPlatformAdapter,
+  ): RPClient {
     this.instance = new RPClient(config, natives as RPClientNatives, platformAdapter);
     return this.instance;
   }

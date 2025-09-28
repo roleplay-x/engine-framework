@@ -3,6 +3,7 @@ import {
   CreateCameraRequest,
   CreateSoundRequest,
   SoundApi,
+  ConfigKey,
 } from '@roleplayx/engine-sdk';
 
 import { RPServerService } from '../../core/server-service';
@@ -18,6 +19,9 @@ import { SocketSoundDisabled } from '../../socket/events/socket-sound-disabled';
 
 import { RPSound, SoundId } from './models/sound';
 import { CameraId, RPCamera } from './models/camera';
+import { ConfigurationService } from '../configuration/service';
+import { PlayerId } from '../session/models/session';
+import { PlatformAdapter } from '../../natives/adapters/platform.adapter';
 
 /**
  * Service for managing world elements like cameras and sounds in the roleplay server.
@@ -58,6 +62,10 @@ export class WorldService extends RPServerService {
   private cameras: Map<CameraId, RPCamera> = new Map([]);
   /** Cache of active sounds indexed by sound ID */
   private sounds: Map<SoundId, RPSound> = new Map([]);
+  /** Platform adapter for network communication */
+  private get platformAdapter(): PlatformAdapter {
+    return this.context.platformAdapter;
+  }
 
   /**
    * Initializes the world service by loading all cameras and sounds.
@@ -249,5 +257,100 @@ export class WorldService extends RPServerService {
         sound,
       ]),
     );
+  }
+
+  /**
+   * Sets the login camera for a player.
+   *
+   * This method retrieves the login screen camera configuration and activates
+   * it for the specified player. The camera is used during the login/spawn
+   * process to provide a cinematic experience.
+   *
+   * @param playerId - The player ID to set the camera for
+   * @returns Promise resolving to true if camera was set successfully, false otherwise
+   *
+   * @example
+   * ```typescript
+   * const success = await worldService.setLoginCamera('player_123');
+   * if (success) {
+   *   console.log('Login camera activated for player');
+   * }
+   * ```
+   */
+  public async setLoginCamera(playerId: PlayerId): Promise<boolean> {
+    try {
+      const configService = this.getService(ConfigurationService);
+      const cameraConfig = configService.getConfig(ConfigKey.LoginScreenCamera);
+
+      if (!cameraConfig || !cameraConfig.value) {
+        this.logger.error('Login screen camera not configured');
+        return false;
+      }
+
+      return this.setCameraForPlayer(playerId, cameraConfig.value.key);
+    } catch (error) {
+      this.logger.error('Failed to set login camera:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sets a camera for a specific player.
+   *
+   * This method activates a camera for the player through the platform adapter.
+   * It's used internally by setLoginCamera and can be used for other camera
+   * management purposes.
+   *
+   * @param playerId - The player ID to set the camera for
+   * @param cameraKey - The camera key/ID to activate
+   * @returns Promise resolving to true if camera was set successfully, false otherwise
+   */
+  public async setCameraForPlayer(playerId: PlayerId, cameraKey: string): Promise<boolean> {
+    try {
+      const camera = this.getCamera(cameraKey);
+
+      if (!camera) {
+        this.logger.error(`Camera not found: ${cameraKey}`);
+        return false;
+      }
+
+      this.platformAdapter.network.emitToPlayer(playerId, 'camera:set', {
+        id: camera.id,
+        type: camera.type,
+        position: camera.static?.position || { x: 0, y: 0, z: 0 },
+        rotation: camera.static?.rotation || { x: 0, y: 0, z: 0 },
+        fov: camera.static?.fov || 75,
+        freezePlayer: camera.freezePlayer,
+        hideHud: camera.hideHud,
+        enabled: camera.enabled,
+      });
+
+      this.logger.info(`Camera activated for player ${playerId}: ${camera.id}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to set camera for player ${playerId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Releases the camera for a specific player.
+   *
+   * This method deactivates any active camera for the player and returns
+   * control to the default game camera.
+   *
+   * @param playerId - The player ID to release the camera for
+   * @returns Promise resolving to true if camera was released successfully, false otherwise
+   */
+  public async releaseCameraForPlayer(playerId: PlayerId): Promise<boolean> {
+    try {
+      this.platformAdapter.network.emitToPlayer(playerId, 'camera:release');
+
+      this.logger.info(`Camera released for player ${playerId}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to release camera for player ${playerId}:`, error);
+      return false;
+    }
   }
 }

@@ -3,6 +3,7 @@ import { EngineClient } from '@roleplayx/engine-sdk';
 import { RPEventEmitter } from '../../core/bus/event-emitter';
 import { RPHookBus } from '../../core/bus/hook-bus';
 import { RPLogger } from '../../core/logger';
+import { PlatformAdapter } from '../natives/adapters';
 
 import { RPServerEvents } from './events/events';
 import { RPServerHooks } from './hooks/hooks';
@@ -30,6 +31,7 @@ export interface IServiceContext<T extends ServerTypes = ServerTypes> {
   readonly eventEmitter: RPEventEmitter<T['events']>;
   readonly hookBus: RPHookBus<T['hooks']>;
   readonly logger: RPLogger;
+  readonly platformAdapter: PlatformAdapter;
 
   getEngineApi<Api>(ApiConstructor: new (client: EngineClient) => Api): Api;
 

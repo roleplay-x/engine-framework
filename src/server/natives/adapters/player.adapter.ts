@@ -1,5 +1,5 @@
-import { PlayerId } from "../../domains/session/models/session";
-import { Vector3 } from "../../../shared";
+import { PlayerId } from '../../domains/session/models/session';
+import { Vector3 } from '../../../shared';
 
 export interface IPlayerAdapter {
   getPlayerId(): PlayerId;
