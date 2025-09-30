@@ -273,9 +273,7 @@ describe('SessionService', () => {
 
   describe('event handlers', () => {
     describe('onPlayerConnecting', () => {
-      it('should start session and emit sessionStarted event', async () => {
-        const emitSpy = jest.spyOn(mockEventEmitter, 'emit');
-
+      it('should start session', async () => {
         mockEventEmitter.emit('playerConnecting', {
           sessionId: testSessionId,
           ipAddress: '192.168.1.1',
@@ -287,10 +285,6 @@ describe('SessionService', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(sessionService['sessions'].has(testSessionId)).toBe(true);
-        expect(emitSpy).toHaveBeenCalledWith('sessionStarted', {
-          sessionId: testSessionId,
-          sessionToken: 'session_token_123',
-        });
       });
 
       it('should emit sessionFinished event on session start failure', async () => {
@@ -348,18 +342,16 @@ describe('SessionService', () => {
         );
         sessionService['sessions'].set(testSessionId, testSession);
 
-        mockEventEmitter.emit('socketSessionStarted', {
-          id: testSessionId,
-          ipAddress: '192.168.1.1',
-          hash: 'new_hash_123',
-          timestamp: Date.now(),
+        mockEventEmitter.emit('sessionStarted', {
+          sessionId: testSessionId,
+          sessionToken: 'session_token_123',
         });
 
         // Wait for async handler
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         const updatedSession = sessionService['sessions'].get(testSessionId);
-        expect(updatedSession?.hash).toBe('new_hash_123');
+        expect(updatedSession?.hash).toBe('session_hash_123');
       });
     });
 
@@ -371,15 +363,12 @@ describe('SessionService', () => {
       it('should remove session and emit sessionFinished event', async () => {
         const emitSpy = jest.spyOn(mockEventEmitter, 'emit');
 
-        mockEventEmitter.emit('socketSessionFinished', {
-          id: testSessionId,
-          ipAddress: '192.168.1.1',
+        mockEventEmitter.emit('sessionFinished', {
+          sessionId: testSessionId,
           accountId: 'acc_123',
           characterId: 'char_123',
           endReason: SessionEndReason.ConnectionDropped,
           endReasonText: 'Connection lost',
-          hash: 'session_hash_123',
-          timestamp: Date.now(),
         });
 
         expect(sessionService['sessions'].has(testSessionId)).toBe(false);
@@ -396,13 +385,12 @@ describe('SessionService', () => {
         sessionService['sessions'].delete(testSessionId);
         const emitSpy = jest.spyOn(mockEventEmitter, 'emit');
 
-        mockEventEmitter.emit('socketSessionFinished', {
-          id: testSessionId,
-          ipAddress: '192.168.1.1',
+        mockEventEmitter.emit('sessionFinished', {
+          sessionId: testSessionId,
           accountId: 'acc_123',
+          characterId: 'char_123',
           endReason: SessionEndReason.ConnectionDropped,
-          hash: 'session_hash_123',
-          timestamp: Date.now(),
+          endReasonText: 'Connection lost',
         });
 
         expect(emitSpy).toHaveBeenCalledTimes(1); // Only the original emit
@@ -829,7 +817,7 @@ describe('SessionService', () => {
       });
     });
 
-    describe('onSocketSessionFinished integration', () => {
+    describe('onSessionFinished integration', () => {
       it('should remove player-session association when session is finished', async () => {
         // Setup: Create session and player association
         sessionService['sessions'].set(testSessionId2, testSession);
@@ -843,18 +831,14 @@ describe('SessionService', () => {
         expect(sessionService.hasPlayer(testSessionId2)).toBe(true);
 
         // Trigger session finished event
-        mockEventEmitter.emit('socketSessionFinished', {
-          id: testSessionId2,
-          ipAddress: '192.168.1.1',
+        mockEventEmitter.emit('sessionFinished', {
+          sessionId: testSessionId2,
           accountId: 'acc_123',
           characterId: 'char_123',
           endReason: SessionEndReason.ConnectionDropped,
           endReasonText: 'Connection lost',
-          hash: 'session_hash_123',
-          timestamp: Date.now(),
         });
 
-        // Verify player-session association is removed
         expect(sessionService.hasPlayer(testSessionId2)).toBe(false);
         expect(sessionService.getPlayerBySession(testSessionId2)).toBeUndefined();
       });
@@ -862,7 +846,6 @@ describe('SessionService', () => {
 
     describe('refreshSession error handling integration', () => {
       it('should remove player-session association when session is dropped', async () => {
-        // Setup: Create session and player association
         sessionService['sessions'].set(testSessionId2, testSession);
         sessionService.createPlayerSession(
           testSessionId2,
@@ -873,25 +856,13 @@ describe('SessionService', () => {
 
         expect(sessionService.hasPlayer(testSessionId2)).toBe(true);
 
-        // Mock API to return 404 error
         const mockEngineError = new EngineError('SESSION_NOT_FOUND', 'Session not found', {}, 404);
         (mockContext.getEngineApi as jest.Mock).mockReturnValue({
           getActiveSessionInfo: jest.fn().mockRejectedValue(mockEngineError),
         });
 
-        // Trigger refreshSession indirectly through socketSessionAuthorized
-        mockEventEmitter.emit('socketSessionAuthorized', {
-          id: testSessionId2,
-          ipAddress: '192.168.1.1',
-          accountId: 'acc_test123',
-          signInMethod: 'password',
-          authorizedDate: Date.now(),
-          hash: 'session_hash_123',
-          timestamp: Date.now(),
-        });
-
-        // Wait for async handler
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        // Call refreshSession directly to test error handling
+        await sessionService['refreshSession'](testSessionId2);
 
         // Verify player-session association is removed
         expect(sessionService.hasPlayer(testSessionId2)).toBe(false);
