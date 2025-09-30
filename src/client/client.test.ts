@@ -198,7 +198,7 @@ describe('RPClient', () => {
     it('should register all core services in correct order', () => {
       RPClient.create(testClientOptions, testNatives, mockPlatformAdapter);
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(5);
+      expect(mockContext.addService).toHaveBeenCalledTimes(6);
       expect(mockContext.addService).toHaveBeenNthCalledWith(1, EventService);
       expect(mockContext.addService).toHaveBeenNthCalledWith(2, PlayerService);
       expect(mockContext.addService).toHaveBeenNthCalledWith(3, HealthService);
@@ -327,7 +327,7 @@ describe('RPClient', () => {
         CameraService,
       ];
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(5);
+      expect(mockContext.addService).toHaveBeenCalledTimes(6);
       serviceOrder.forEach((Service, index) => {
         expect(mockContext.addService).toHaveBeenNthCalledWith(index + 1, Service);
       });

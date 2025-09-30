@@ -52,6 +52,7 @@ export * from './domains/session/events/session-started';
 export * from './domains/session/events/session-updated';
 export * from './domains/session/models/session';
 export * from './domains/session/service';
+export * from './domains/webview/service';
 export * from './domains/world/events/camera-created';
 export * from './domains/world/events/camera-updated';
 export * from './domains/world/events/sound-created';

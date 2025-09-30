@@ -10,6 +10,7 @@ import { PlayerService } from '../domains/player/service';
 import { HealthService } from '../domains/health/service';
 import { SpawnService } from '../domains/spawn/service';
 import { CameraService } from '../domains/camera/service';
+import { WebViewService } from '../domains/webview/service';
 
 /** Configuration options for creating a roleplay client instance */
 export interface RPClientOptions {
@@ -107,6 +108,7 @@ export class RPClient {
     this.context.addService(HealthService);
     this.context.addService(SpawnService);
     this.context.addService(CameraService);
+    this.context.addService(WebViewService);
   }
 
   /**

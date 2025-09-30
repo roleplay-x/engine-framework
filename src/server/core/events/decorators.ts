@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { RPServerEvents } from './events';
 import { RPClientToServerEvents } from '../../../shared/types';
 import { PlayerId } from '../../domains/session/models/session';
+import { RPServerHooks } from '../hooks/hooks';
 
 const HANDLERS = Symbol('RP_SERVER_EVENT_HANDLERS');
 const CLIENT_HANDLERS = Symbol('RP_CLIENT_EVENT_HANDLERS');
+const HOOK_HANDLERS = Symbol('RP_SERVER_HOOK_HANDLERS');
 
 export function OnServer<
   Events extends RPServerEvents = RPServerEvents,
@@ -92,6 +94,63 @@ export function getClientEventHandlers<Events extends RPClientToServerEvents = R
   while (currentProto && currentProto !== Function.prototype) {
     const protoHandlers = Reflect.getOwnMetadata(CLIENT_HANDLERS, currentProto) as
       | Array<{ method: string; event: keyof Events }>
+      | undefined;
+
+    if (protoHandlers) {
+      handlers.push(...protoHandlers);
+    }
+
+    currentProto = Object.getPrototypeOf(currentProto);
+  }
+
+  return handlers.length > 0 ? handlers : undefined;
+}
+
+/**
+ * Decorator for defining hook handlers on the server side with type safety.
+ * Hooks are lifecycle events that can be intercepted and modified.
+ *
+ * @param hook - Hook name to listen for
+ * @returns Method decorator
+ *
+ * @example
+ * ```typescript
+ * export class MyService extends RPServerService {
+ *   @OnHook('sessionCharacterLinked')
+ *   private onCharacterLinked(data: { sessionId: string; characterId: string }): void {
+ *     console.log('Character linked:', data);
+ *   }
+ * }
+ * ```
+ */
+export function OnHook<
+  Hooks extends RPServerHooks = RPServerHooks,
+  K extends keyof Hooks = keyof Hooks,
+>(hook: K) {
+  return function (target: object, propertyKey: string, _descriptor: PropertyDescriptor) {
+    const ctor = target.constructor as unknown;
+    const list: Array<{ method: string; hook: keyof Hooks }> =
+      Reflect.getOwnMetadata(HOOK_HANDLERS, ctor as object) || [];
+    list.push({ method: propertyKey, hook });
+    Reflect.defineMetadata(HOOK_HANDLERS, list, ctor as object);
+  };
+}
+
+/**
+ * Gets all hook handlers from a service instance.
+ *
+ * @param instance - Service instance
+ * @returns Array of hook handlers or undefined if none found
+ */
+export function getHookHandlers<Hooks extends RPServerHooks = RPServerHooks>(
+  instance: Record<string, unknown>,
+) {
+  const handlers: Array<{ method: string; hook: keyof Hooks }> = [];
+  let currentProto = instance.constructor;
+
+  while (currentProto && currentProto !== Function.prototype) {
+    const protoHandlers = Reflect.getOwnMetadata(HOOK_HANDLERS, currentProto) as
+      | Array<{ method: string; hook: keyof Hooks }>
       | undefined;
 
     if (protoHandlers) {

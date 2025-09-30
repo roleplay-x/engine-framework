@@ -9,15 +9,12 @@ import {
 } from '@roleplayx/engine-sdk';
 
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
-import { RPPlayerConnecting } from '../../natives/events/player/player-connecting';
-import { RPPlayerJoined } from '../../natives/events/player/player-joined';
 import { SocketSessionAuthorized } from '../../socket/events/socket-session-authorized';
 import { SocketSessionFinished } from '../../socket/events/socket-session-finished';
 import { RPServerService } from '../../core/server-service';
 import { OnClient, OnServer } from '../../core/events/decorators';
 import { SocketSessionCharacterLinked } from '../../socket/events/socket-session-character-linked';
 import { SocketSessionUpdated } from '../../socket/events/socket-session-updated';
-import { RPPlayerDisconnected } from '../../natives/events/player/player-disconnected';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../core/errors';
 import { ReferenceService } from '../reference/service';
 
@@ -25,6 +22,7 @@ import { generateSessionId, generateSessionTokenHash, PlayerId, RPSession, Sessi
 import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
 import { RPServerEvents } from '../../core/events/events';
+import { WebViewService } from '../webview/service';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -216,7 +214,7 @@ export class SessionService extends RPServerService {
   }
 
   @OnServer('playerConnecting')
-  private async onPlayerConnecting({ ipAddress, playerId }: RPPlayerConnecting) {
+  private async onPlayerConnecting({ ipAddress, playerId }: RPServerEvents['playerConnecting']) {
     this.logger.info(`Player ${playerId} connecting with IP ${ipAddress}`);
   }
 
@@ -252,10 +250,11 @@ export class SessionService extends RPServerService {
     }
 
     this.getService(WorldService).setLoginCamera(player.id);
+    this.getService(WebViewService).configureShell(player);
   }
 
   @OnServer('playerDisconnected')
-  private async onPlayerDisconnected({ sessionId, reason }: RPPlayerDisconnected) {
+  private async onPlayerDisconnected({ sessionId, reason }: RPServerEvents['playerDisconnected']) {
     this.removePlayerBySession(sessionId);
     await this.getEngineApi(SessionApi).finishSession(sessionId, { endReason: reason });
   }
@@ -314,6 +313,12 @@ export class SessionService extends RPServerService {
       sessionId: session.id,
       account: session.account!,
       character: session.character!,
+    });
+
+    await this.hookBus.run('sessionCharacterLinked', {
+      sessionId: session.id,
+      accountId: session.account!.id,
+      characterId: session.character!.id,
     });
 
     const player = this.getPlayerBySession(session.id);

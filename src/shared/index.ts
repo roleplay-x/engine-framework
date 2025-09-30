@@ -10,3 +10,4 @@ export * from './events/c2s/spawn/spawn-request';
 export * from './math/base.vector';
 export * from './math/vector2';
 export * from './math/vector3';
+export * from './types';

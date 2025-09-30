@@ -5,7 +5,7 @@ import { RPLogger } from '../../core/logger';
 import { RPHookBus } from '../../core/bus/hook-bus';
 
 import { RPServerEvents } from './events/events';
-import { getEventHandlers, getClientEventHandlers } from './events/decorators';
+import { getEventHandlers, getClientEventHandlers, getHookHandlers } from './events/decorators';
 import { RPClientToServerEvents } from '../../shared/types';
 import { IServiceContext, ServerTypes, ServiceConstructor } from './types';
 import { PlayerId } from '../domains/session/models/session';
@@ -90,6 +90,7 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
     this.logger = context.logger;
     this.eventHandlers = this.bindEventEmitters(context.eventEmitter);
     this.clientEventHandlers = this.bindClientEventHandlers();
+    this.bindHookHandlers();
   }
 
   /**
@@ -186,6 +187,22 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
       this.context.platformAdapter.network.onClientEvent(event, (playerId: PlayerId, ...args) => {
         handler(playerId, ...args);
       });
+    }
+  }
+
+  /**
+   * Scans the service instance for @OnHook decorated methods and binds them to hooks.
+   *
+   * @private
+   */
+  private bindHookHandlers(): void {
+    const handlers = getHookHandlers<T['hooks']>(this) || [];
+
+    for (const { method, hook } of handlers) {
+      const fn = (this as Record<string, unknown>)[method];
+      if (typeof fn === 'function') {
+        this.hookBus.on(hook as Extract<keyof T['hooks'], string>, fn.bind(this));
+      }
     }
   }
 

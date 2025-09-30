@@ -22,6 +22,28 @@ export interface RPServerToClientEvents {
   'player:initialize': SpawnData;
   'cameraSet': CameraData;
   'cameraRelease': void;
+  'webviewConfigureShell': { shellUrl: string };
+  'webviewShowScreen': {
+    screen: string;
+    data?: Record<string, any>;
+    transition?: 'fade' | 'slide' | 'none';
+  };
+  'webviewHideScreen': { screen: string };
+  'webviewCloseScreen': { screen: string };
+  'webviewUpdateScreen': {
+    screen: string;
+    data: Record<string, any>;
+  };
+  'webviewSendMessage': {
+    screen: string;
+    event: string;
+    data: any;
+  };
+  'webviewSetContext': {
+    player: Record<string, any>;
+    config: Record<string, any>;
+    localization: Record<string, any>;
+  };
 }
 
 export interface RPClientToServerEvents {
@@ -37,6 +59,19 @@ export interface RPClientToServerEvents {
   };
   'spawnRequest': { spawnPointId?: string };
   'spawnFailed': { error: string };
+  'webviewShellReady': {};
+  'webviewScreenReady': { screen: string };
+  'webviewScreenInitialized': { screen: string };
+  'webviewScreenAction': {
+    screen: string;
+    action: string;
+    payload: any;
+  };
+  'webviewScreenError': {
+    screen: string;
+    error: string;
+  };
+  'webviewScreenClosed': { screen: string };
 }
 
 export interface CameraData {

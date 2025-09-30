@@ -33,7 +33,7 @@ export class PlayerService extends RPClientService<ClientTypes> {
     const playerReadyPayload: RPClientToServerEvents['playerReady'] = {
       playerId: this.getPlayerId(),
     };
-    console.log('playerReadyPayload', playerReadyPayload);
+
     this.platformAdapter.network.emitToServer('playerReady', playerReadyPayload);
     await super.init();
   }

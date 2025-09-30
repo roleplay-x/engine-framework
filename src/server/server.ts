@@ -15,6 +15,7 @@ import { ConfigurationService } from './domains/configuration/service';
 import { LocalizationService } from './domains/localization/service';
 import { WorldService } from './domains/world/service';
 import { ReferenceService } from './domains/reference/service';
+import { WebViewService } from './domains/webview/service';
 import { ApiControllerCtor, ApiServer, ApiServerConfig } from './api';
 import { PlatformAdapter } from './natives/adapters';
 
@@ -26,6 +27,8 @@ export interface RPServerOptions {
   apiUrl: string;
   /** WebSocket URL for real-time communication */
   socketUrl: string;
+  /** UI Shell URL for webview system (optional, falls back to development mode) */
+  shellUrl?: string;
   /** API key identifier for authentication */
   apiKeyId: string;
   /** API key secret for authentication */
@@ -110,6 +113,8 @@ export class RPServer {
   private readonly apiControllers: ApiControllerCtor[] = [];
   /** Flag to track if shutdown handlers are registered */
   private shutdownHandlersRegistered = false;
+  /** UI Shell URL for webview system */
+  private readonly shellUrl?: string;
 
   /**
    * Private constructor for singleton pattern.
@@ -149,6 +154,8 @@ export class RPServer {
       logger,
     );
 
+    this.shellUrl = options.shellUrl;
+
     const contextType = natives.customContext?.type ?? RPServerContext;
     const contextOptions: RPServerContextOptions & CustomServerContextOptions = {
       engineClient,
@@ -166,7 +173,8 @@ export class RPServer {
       .addService(WorldService)
       .addService(SessionService)
       .addService(ReferenceService)
-      .addService(AccountService);
+      .addService(AccountService)
+      .addService(WebViewService);
 
     this.apiServer = new ApiServer(this.context, options.api);
 
@@ -359,6 +367,15 @@ export class RPServer {
    */
   public getApiServer(): ApiServer | undefined {
     return this.apiServer;
+  }
+
+  /**
+   * Gets the shell URL if configured.
+   *
+   * @returns The shell URL or undefined if not configured
+   */
+  public getShellUrl(): string | undefined {
+    return this.shellUrl;
   }
 
   /**

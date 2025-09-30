@@ -192,7 +192,7 @@ describe('RPServer', () => {
     it('should register all core services in correct order', () => {
       RPServer.create(testServerOptions, testNatives, mockPlatformAdapter);
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(6);
+      expect(mockContext.addService).toHaveBeenCalledTimes(7);
       expect(mockContext.addService).toHaveBeenNthCalledWith(1, ConfigurationService);
       expect(mockContext.addService).toHaveBeenNthCalledWith(2, LocalizationService);
       expect(mockContext.addService).toHaveBeenNthCalledWith(3, WorldService);
@@ -428,7 +428,7 @@ describe('RPServer', () => {
         AccountService,
       ];
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(6);
+      expect(mockContext.addService).toHaveBeenCalledTimes(7);
       serviceOrder.forEach((Service, index) => {
         expect(mockContext.addService).toHaveBeenNthCalledWith(index + 1, Service);
       });
