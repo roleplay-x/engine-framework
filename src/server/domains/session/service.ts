@@ -5,22 +5,25 @@ import {
   LinkCharacterToSessionRequest,
   SessionApi,
   SessionEndReason,
+  ConfigKey,
 } from '@roleplayx/engine-sdk';
 
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
 import { RPPlayerConnecting } from '../../natives/events/player/player-connecting';
+import { RPPlayerJoined } from '../../natives/events/player/player-joined';
 import { SocketSessionAuthorized } from '../../socket/events/socket-session-authorized';
 import { SocketSessionFinished } from '../../socket/events/socket-session-finished';
 import { RPServerService } from '../../core/server-service';
 import { OnServer } from '../../core/events/decorators';
 import { SocketSessionCharacterLinked } from '../../socket/events/socket-session-character-linked';
 import { SocketSessionUpdated } from '../../socket/events/socket-session-updated';
+import { RPPlayerDisconnected } from '../../natives/events/player/player-disconnected';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../core/errors';
 import { ReferenceService } from '../reference/service';
 
 import { generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
+import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
-import { RPServerEvents } from '../../core/events/events';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -219,6 +222,8 @@ export class SessionService extends RPServerService {
       const tokenHash = generateSessionTokenHash(sessionId, token);
       this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
 
+      this.eventEmitter.emit('sessionStarted', { sessionId, sessionToken: token });
+
       this.logger.info(`Player ${sessionId} connected and joined with IP ${ipAddress}`);
     } catch {
       this.eventEmitter.emit('sessionFinished', {
@@ -229,50 +234,27 @@ export class SessionService extends RPServerService {
   }
 
   @OnServer('playerDisconnected')
-  private async onPlayerDisconnected({ sessionId, reason }: RPServerEvents['playerDisconnected']) {
+  private async onPlayerDisconnected({ sessionId, reason }: RPPlayerDisconnected) {
     this.removePlayerBySession(sessionId);
     await this.getEngineApi(SessionApi).finishSession(sessionId, { endReason: reason });
   }
 
-  @OnServer('sessionStarted')
-  private async onSessionStarted(payload: RPServerEvents['sessionStarted']) {
-    const player = this.getPlayerBySession(payload.sessionId);
+  @OnServer('socketSessionStarted')
+  private async onSocketSessionStarted(payload: SocketSessionStarted) {
+    const player = this.getPlayerBySession(payload.id);
     if (!player) {
       return;
     }
 
-    const playerJoinedData = {
-      playerId: player.id,
-      ipAddress: player.ip,
-      sessionId: payload.sessionId,
-    };
-    
-    player.emit('playerJoined', playerJoinedData);
-  }
-
-  @OnServer('sessionFinished')
-  private async onSessionFinished(payload: RPServerEvents['sessionFinished']) {
-    if (!this.sessions.delete(payload.sessionId)) {
-      return;
+    const session = this.sessions.get(payload.id);
+    if (session) {
+      session.hash = payload.hash;
     }
 
-    this.removePlayerBySession(payload.sessionId);
-
-    this.eventEmitter.emit('sessionFinished', {
-      sessionId: payload.sessionId,
-      accountId: payload.accountId,
-      characterId: payload.characterId,
-      endReason: payload.endReason,
-      endReasonText: payload.endReasonText,
-    });
-  }
-
-  @OnServer('socketSessionStarted')
-  private async onSocketSessionStarted(payload: SocketSessionStarted) {
-    const tokenHash = await this.getTokenHash(payload.id);
-    this.sessions.set(payload.id, {
-      ...(this.sessions.get(payload.id) ?? { id: payload.id, tokenHash }),
-      hash: payload.hash,
+    player.emit('playerJoined', {
+      playerId: player.id,
+      ipAddress: player.ip,
+      sessionId: payload.id,
     });
   }
 
@@ -282,7 +264,6 @@ export class SessionService extends RPServerService {
       return;
     }
 
-    // Remove player-session association when session is finished
     this.removePlayerBySession(payload.id);
 
     this.eventEmitter.emit('sessionFinished', {
@@ -319,6 +300,12 @@ export class SessionService extends RPServerService {
       account: session.account!,
       character: session.character!,
     });
+
+    const player = this.getPlayerBySession(session.id);
+    if (player) {
+      const worldService = this.getService(WorldService);
+      await worldService.setLoginCamera(player.id);
+    }
   }
 
   @OnServer('socketSessionUpdated')
@@ -337,11 +324,6 @@ export class SessionService extends RPServerService {
       account: session.account,
       character: session.character,
     });
-  }
-
-  @OnServer('sessionUpdated')
-  private async onSessionUpdated(payload: RPServerEvents['sessionUpdated']) {
-    await this.refreshSession(payload.sessionId);
   }
 
   private async refreshSession(sessionId: SessionId): Promise<RPSession | undefined> {
