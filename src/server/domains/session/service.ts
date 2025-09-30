@@ -217,7 +217,7 @@ export class SessionService extends RPServerService {
       const { token } = await this.getEngineApi(SessionApi).startSession(sessionId, { ipAddress });
 
       const tokenHash = generateSessionTokenHash(sessionId, token);
-      this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash, token);
+      this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
 
       this.logger.info(`Player ${sessionId} connected and joined with IP ${ipAddress}`);
     } catch {
@@ -267,28 +267,12 @@ export class SessionService extends RPServerService {
     });
   }
 
-  public async getSessionToken(sessionId: SessionId): Promise<string> {
-    const session = this.getSession(sessionId);
-    if (!session) {
-      return '';
-    }
-
-    return session.token;
-  }
-
   @OnServer('socketSessionStarted')
   private async onSocketSessionStarted(payload: SocketSessionStarted) {
     const tokenHash = await this.getTokenHash(payload.id);
-    const token = await this.getSessionToken(payload.id);
     this.sessions.set(payload.id, {
-      ...(this.sessions.get(payload.id) ?? { id: payload.id, tokenHash, token }),
+      ...(this.sessions.get(payload.id) ?? { id: payload.id, tokenHash }),
       hash: payload.hash,
-      token: token,
-    });
-
-    this.eventEmitter.emit('sessionStarted', {
-      sessionId: payload.id,
-      sessionToken: token,
     });
   }
 
@@ -367,12 +351,10 @@ export class SessionService extends RPServerService {
 
     try {
       const sessionInfo = await this.getEngineApi(SessionApi).getActiveSessionInfo(sessionId);
-      const token = await this.getSessionToken(sessionId);
       this.sessions.set(sessionId, {
-        ...(this.sessions.get(sessionId) ?? { id: sessionId, token }),
+        ...(this.sessions.get(sessionId) ?? { id: sessionId }),
         ...sessionInfo,
       });
-      
       return this.sessions.get(sessionId);
     } catch (error) {
       if (error instanceof EngineError && error.statusCode === 404) {
@@ -411,7 +393,6 @@ export class SessionService extends RPServerService {
     playerId: string,
     ip: string,
     tokenHash: string,
-    token: string,
   ): void {
     if (this.sessionToPlayer.has(sessionId)) {
       throw new Error(`Session ${sessionId} already has an associated player`);
@@ -419,7 +400,7 @@ export class SessionService extends RPServerService {
 
     const player = ServerPlayer.create(playerId, sessionId, ip, this.context.platformAdapter);
     this.sessionToPlayer.set(sessionId, player);
-    this.sessions.set(sessionId, { id: sessionId, tokenHash, token });
+    this.sessions.set(sessionId, { id: sessionId, tokenHash });
   }
 
   /**

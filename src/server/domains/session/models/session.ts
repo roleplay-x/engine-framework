@@ -17,7 +17,6 @@ export function generateSessionTokenHash(sessionId: SessionId, sessionToken: str
 export interface RPSession {
   id: SessionId;
   tokenHash: string;
-  token: string;
   character?: SessionInfoCharacter;
   account?: SessionInfoAccount;
   hash?: string;
