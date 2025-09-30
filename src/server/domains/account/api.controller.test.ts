@@ -80,6 +80,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -109,6 +110,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
@@ -200,6 +202,7 @@ describe('AccountController Integration', () => {
       const sessionWithDifferentHash: RPSession = {
         id: testSessionId,
         tokenHash: 'different_hash', // Wrong hash
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -244,6 +247,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -273,6 +277,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
@@ -344,6 +349,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -374,6 +380,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
         account: {
           id: 'existing_acc',
           username: 'existinguser',
@@ -443,6 +450,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -472,6 +480,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
@@ -540,6 +549,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -566,6 +576,7 @@ describe('AccountController Integration', () => {
 
       const sessionWithAccount: RPSession = {
         id: testSessionId,
+        token: 'session_token_123',
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
         account: {
@@ -629,6 +640,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -661,6 +673,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
@@ -720,6 +733,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -747,6 +761,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
@@ -809,6 +824,7 @@ describe('AccountController Integration', () => {
       const sessionWithoutAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
       };
 
@@ -841,6 +857,7 @@ describe('AccountController Integration', () => {
       const sessionWithAccount: RPSession = {
         id: testSessionId,
         tokenHash: expectedTokenHash,
+        token: 'session_token_123',
         hash: 'session_hash',
         account: {
           id: 'existing_acc',
