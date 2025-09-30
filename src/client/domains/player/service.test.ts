@@ -246,63 +246,6 @@ describe('PlayerService', () => {
     });
   });
 
-  describe('event handlers', () => {
-    describe('onPlayerSpawn', () => {
-      it('should handle player spawn event', () => {
-        const playerId = 123;
-        const position = { x: 100, y: 200, z: 300 };
-
-        (playerService as any).onPlayerSpawned({ id: playerId, position });
-
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player spawned:', {
-          id: playerId,
-          position,
-        });
-      });
-    });
-
-    describe('onPlayerDeath', () => {
-      it('should handle player death event', () => {
-        const playerId = 123;
-        const killerId = 456;
-        const weaponHash = 789;
-
-        (playerService as any).onPlayerDied({ playerId, killerId, weaponHash });
-
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', {
-          playerId,
-          killerId,
-          weaponHash,
-        });
-      });
-
-      it('should handle player death without killer', () => {
-        const playerId = 123;
-
-        (playerService as any).onPlayerDied({ playerId });
-
-        expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', { playerId });
-      });
-    });
-  });
-
-  describe('integration scenarios', () => {
-    it('should handle complete player lifecycle', async () => {
-      await playerService.setPlayerModel('player_zero');
-      expect(mockPlatformAdapter.player.setPlayerModel).toHaveBeenCalledWith('player_zero');
-
-      playerService.setPlayerHealth(75);
-      expect(playerService.getPlayerHealth()).toBe(75);
-
-      (playerService as any).onPlayerDied({ playerId: 123, killerId: 456, weaponHash: 789 });
-      expect(mockContext.logger.info).toHaveBeenCalledWith('Player died:', {
-        playerId: 123,
-        killerId: 456,
-        weaponHash: 789,
-      });
-    });
-  });
-
   describe('error handling', () => {
     it('should handle platform adapter errors gracefully', async () => {
       const error = new Error('Platform adapter error');

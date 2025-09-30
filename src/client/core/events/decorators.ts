@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { RPAllClientEvents, RPServerToClientEvents, RPClientToServerEvents } from './types';
+import { RPServerToClientEvents, RPClientToServerEvents, RPClientEvents } from '../../../shared/types';
 import { GameEventName, GameEventTypes } from '../../natives/events/game-events';
 
 const HANDLERS = Symbol('RP_CLIENT_EVENT_HANDLERS');
@@ -26,7 +26,7 @@ const HANDLERS = Symbol('RP_CLIENT_EVENT_HANDLERS');
  * ```
  */
 export function OnClient<
-  Events extends RPAllClientEvents = RPAllClientEvents,
+  Events extends RPClientEvents = RPClientEvents,
   K extends keyof Events = keyof Events,
 >(event: K) {
   return function (target: object, propertyKey: string, _descriptor: PropertyDescriptor) {

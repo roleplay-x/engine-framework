@@ -1,9 +1,10 @@
 import { RPClientService } from '../../core/client-service';
 import { OnServer } from '../../core/events/decorators';
-import { RPServerToClientEvents } from '../../core/events/types';
+import { RPServerToClientEvents } from '../../../shared/types';
 import { ClientTypes } from '../../core/types';
 import { ClientPlatformAdapter } from '../../natives/adapters/platform.adapter';
 import { Vector3 } from '../../../shared';
+import { SpawnService } from '../spawn/service';
 
 /**
  * Camera service for managing client-side camera operations.
@@ -35,9 +36,10 @@ export class CameraService extends RPClientService<ClientTypes> {
    *
    * @param data - Camera data from server
    */
-  @OnServer('camera:set')
-  public onCameraSet(data: RPServerToClientEvents['camera:set']): void {
+  @OnServer('cameraSet')
+  public onCameraSet(data: RPServerToClientEvents['cameraSet']): void {
     this.logger.info('Setting camera:', data);
+    this.platformAdapter.core.shutdownLoadingScreen();
 
     this.cameraId = this.platformAdapter.camera.createCamera(data.type);
     this.activeCamera = data.id;
@@ -62,8 +64,8 @@ export class CameraService extends RPClientService<ClientTypes> {
   /**
    * Handles camera release events from the server.
    */
-  @OnServer('camera:release')
-  public onCameraRelease(data: RPServerToClientEvents['camera:release']): void {
+  @OnServer('cameraRelease')
+  public onCameraRelease(data: RPServerToClientEvents['cameraRelease']): void {
     this.logger.info('Releasing camera');
 
     if (this.cameraId !== null) {

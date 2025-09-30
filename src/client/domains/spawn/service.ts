@@ -1,13 +1,9 @@
 import { RPClientService } from '../../core/client-service';
-import { OnClient, OnServer } from '../../core/events/decorators';
 import { ClientTypes } from '../../core/types';
 import { Vector3 } from '../../../shared';
 import {
-  RPAllClientEvents,
-  RPServerToClientEvents,
   SpawnData,
-  CameraData,
-} from '../../core/events/types';
+} from '../../../shared/types';
 
 /**
  * Interface for spawn request options
@@ -78,91 +74,15 @@ export class SpawnService extends RPClientService<ClientTypes> {
   }
 
   /**
-   * Handles spawn execution from server.
-   *
-   * @param data - Spawn data from server
-   */
-  @OnClient('spawn:execute')
-  public async onSpawnExecute(data: RPServerToClientEvents['spawn:execute']): Promise<void> {
-    this.logger.info('Received spawn execution from server', { data });
-
-    this.isSpawning = true;
-    this.currentSpawnData = data;
-
-    await this.executeSpawn(data);
-  }
-
-  /**
-   * Handles spawn failure from server.
-   *
-   * @param data - Spawn failure data
-   */
-  @OnClient('spawn:failed')
-  public onSpawnFailed(data: RPServerToClientEvents['spawn:failed']): void {
-    this.logger.error('Spawn failed:', data.error);
-
-    this.isSpawning = false;
-    this.currentSpawnData = null;
-
-    this.eventService.emitToServer('spawn:failed', data);
-  }
-
-  /**
-   * Handles player initialization from server.
-   *
-   * @param data - Player initialization data
-   */
-  @OnClient('player:initialize')
-  public async onPlayerInitialize(
-    data: RPServerToClientEvents['player:initialize'],
-  ): Promise<void> {
-    this.logger.info('Received player initialization from server', { data });
-
-    await this.executeSpawn(data);
-  }
-
-  /**
-   * Handles player ready event from server.
-   */
-  @OnClient('player:ready')
-  public onPlayerReady(data: RPServerToClientEvents['player:ready']): void {
-    this.logger.info('Player ready event received');
-
-    this.eventService.emitToServer('player:ready');
-  }
-
-  /**
-   * Handles player spawned confirmation.
-   */
-  @OnClient('player:spawned')
-  public onPlayerSpawned(data: RPServerToClientEvents['player:spawned']): void {
-    this.logger.info('Player spawned successfully');
-
-    this.isSpawning = false;
-    this.currentSpawnData = null;
-
-    this.eventService.emitToServer('player:spawned');
-  }
-
-  /**
-   * Handles first initialization completed event.
-   */
-  @OnClient('player:firstInitCompleted')
-  public onFirstInitCompleted(data: RPServerToClientEvents['player:firstInitCompleted']): void {
-    this.logger.info('First initialization completed');
-
-    this.eventService.emitToServer('player:firstInitCompleted');
-  }
-
-  /**
    * Executes the actual spawn using platform adapter.
    *
    * @param data - Spawn data
    * @private
    */
-  private async executeSpawn(data: SpawnData): Promise<void> {
+  public async executeSpawn(data: SpawnData): Promise<void> {
     try {
       this.logger.info('Executing spawn', { data });
+      this.platformAdapter.core.shutdownLoadingScreen();
 
       if (data.model) {
         await this.platformAdapter.player.setPlayerModel(data.model);

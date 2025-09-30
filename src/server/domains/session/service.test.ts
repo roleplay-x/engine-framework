@@ -272,49 +272,6 @@ describe('SessionService', () => {
   });
 
   describe('event handlers', () => {
-    describe('onPlayerConnecting', () => {
-      it('should start session and emit sessionStarted event', async () => {
-        const emitSpy = jest.spyOn(mockEventEmitter, 'emit');
-
-        mockEventEmitter.emit('playerConnecting', {
-          sessionId: testSessionId,
-          ipAddress: '192.168.1.1',
-          playerId: 'test-player-123',
-          name: 'TestPlayer',
-        });
-
-        // Wait for async handler
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(sessionService['sessions'].has(testSessionId)).toBe(true);
-        expect(emitSpy).toHaveBeenCalledWith('sessionStarted', {
-          sessionId: testSessionId,
-          sessionToken: 'session_token_123',
-        });
-      });
-
-      it('should emit sessionFinished event on session start failure', async () => {
-        const emitSpy = jest.spyOn(mockEventEmitter, 'emit');
-        (mockContext.getEngineApi as jest.Mock).mockReturnValue({
-          startSession: jest.fn().mockRejectedValue(new Error('API Error')),
-        });
-
-        mockEventEmitter.emit('playerConnecting', {
-          sessionId: testSessionId,
-          ipAddress: '192.168.1.1',
-          playerId: 'test-player-123',
-          name: 'TestPlayer',
-        });
-
-        // Wait for async handler
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(emitSpy).toHaveBeenCalledWith('sessionFinished', {
-          sessionId: testSessionId,
-          endReason: SessionEndReason.SessionInitFailed,
-        });
-      });
-    });
 
     describe('onPlayerDisconnected', () => {
       it('should finish session via API', async () => {
@@ -632,7 +589,7 @@ describe('SessionService', () => {
       });
     });
 
-    describe('getSessionByPlayer', () => {
+    describe('getSessionIdByPlayer', () => {
       it('should return session ID for existing player', () => {
         sessionService.createPlayerSession(
           testSessionId2,
@@ -641,13 +598,13 @@ describe('SessionService', () => {
           'token_hash',
         );
 
-        const result = sessionService.getSessionByPlayer(testPlayerId);
+        const result = sessionService.getSessionIdByPlayer(testPlayerId);
 
         expect(result).toBe(testSessionId2);
       });
 
       it('should return undefined for non-existing player', () => {
-        const result = sessionService.getSessionByPlayer('non_existent_player');
+        const result = sessionService.getSessionIdByPlayer('non_existent_player');
 
         expect(result).toBeUndefined();
       });
@@ -662,7 +619,7 @@ describe('SessionService', () => {
         );
         sessionService.createPlayerSession(sessionId3, testPlayerId, '192.168.1.2', 'token_hash2');
 
-        const result = sessionService.getSessionByPlayer(testPlayerId);
+        const result = sessionService.getSessionIdByPlayer(testPlayerId);
 
         // Should return one of the sessions (implementation dependent)
         expect([testSessionId2, sessionId3]).toContain(result);

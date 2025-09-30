@@ -1,6 +1,6 @@
 import { Vector3 } from '../../../shared';
 import { BasePlayer } from '../../../shared';
-import { RPServerToClientEvents } from '../../../client/core/events/types';
+import { RPServerToClientEvents } from '../../../shared/types';
 import { PlatformAdapter } from '../adapters';
 
 export class ServerPlayer extends BasePlayer {

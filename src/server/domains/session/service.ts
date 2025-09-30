@@ -14,16 +14,17 @@ import { RPPlayerJoined } from '../../natives/events/player/player-joined';
 import { SocketSessionAuthorized } from '../../socket/events/socket-session-authorized';
 import { SocketSessionFinished } from '../../socket/events/socket-session-finished';
 import { RPServerService } from '../../core/server-service';
-import { OnServer } from '../../core/events/decorators';
+import { OnClient, OnServer } from '../../core/events/decorators';
 import { SocketSessionCharacterLinked } from '../../socket/events/socket-session-character-linked';
 import { SocketSessionUpdated } from '../../socket/events/socket-session-updated';
 import { RPPlayerDisconnected } from '../../natives/events/player/player-disconnected';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../core/errors';
 import { ReferenceService } from '../reference/service';
 
-import { generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
+import { generateSessionId, generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
 import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
+import { RPServerEvents } from '../../core/events/events';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -215,22 +216,42 @@ export class SessionService extends RPServerService {
   }
 
   @OnServer('playerConnecting')
-  private async onPlayerConnecting({ sessionId, ipAddress, playerId }: RPPlayerConnecting) {
+  private async onPlayerConnecting({ ipAddress, playerId }: RPPlayerConnecting) {
+    this.logger.info(`Player ${playerId} connecting with IP ${ipAddress}`);
+  }
+
+  @OnClient('playerReady')
+  private async onPlayerReady(playerId: PlayerId) {
+    const sessionId = generateSessionId();
+
     try {
+      const ipAddress = this.context.platformAdapter.player.getPlayerIP(playerId);
       const { token } = await this.getEngineApi(SessionApi).startSession(sessionId, { ipAddress });
 
       const tokenHash = generateSessionTokenHash(sessionId, token);
       this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
 
       this.eventEmitter.emit('sessionStarted', { sessionId, sessionToken: token });
-
-      this.logger.info(`Player ${sessionId} connected and joined with IP ${ipAddress}`);
+      this.logger.info(`Player ${sessionId} (ID: ${playerId}) connected and joined with IP ${ipAddress}`);
     } catch {
       this.eventEmitter.emit('sessionFinished', {
         sessionId,
         endReason: SessionEndReason.SessionInitFailed,
       });
     }
+  }
+
+  @OnServer('sessionStarted')
+  private async onSessionStarted({ sessionId }: RPServerEvents['sessionStarted']) {
+    this.logger.info(`Session ${sessionId} started`);
+
+    const player = this.getPlayerBySession(sessionId);
+    if (!player) {
+      this.logger.error(`Player ${sessionId} not found in session`);
+      return;
+    }
+
+    this.getService(WorldService).setLoginCamera(player.id);
   }
 
   @OnServer('playerDisconnected')
@@ -250,12 +271,6 @@ export class SessionService extends RPServerService {
     if (session) {
       session.hash = payload.hash;
     }
-
-    player.emit('playerJoined', {
-      playerId: player.id,
-      ipAddress: player.ip,
-      sessionId: payload.id,
-    });
   }
 
   @OnServer('socketSessionFinished')
@@ -417,7 +432,16 @@ export class SessionService extends RPServerService {
    * }
    * ```
    */
-  public getSessionByPlayer(playerId: string): SessionId | undefined {
+  public getSessionByPlayer(playerId: string): ServerPlayer | undefined {
+    for (const [sessionId, player] of this.sessionToPlayer.entries()) {
+      if (player.id === playerId) {
+        return player;
+      }
+    }
+    return undefined;
+  }
+
+  public getSessionIdByPlayer(playerId: string): SessionId | undefined {
     for (const [sessionId, player] of this.sessionToPlayer.entries()) {
       if (player.id === playerId) {
         return sessionId;

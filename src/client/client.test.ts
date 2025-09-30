@@ -243,27 +243,6 @@ describe('RPClient', () => {
       expect(mockContext.init).toHaveBeenCalledTimes(1);
     });
 
-    it('should register shutdown handlers', async () => {
-      const originalListenerCount = process.listenerCount('SIGTERM');
-
-      await client.start();
-
-      expect(process.listenerCount('SIGTERM')).toBeGreaterThan(originalListenerCount);
-      expect(process.listenerCount('SIGINT')).toBeGreaterThan(0);
-      expect(process.listenerCount('SIGHUP')).toBeGreaterThan(0);
-      expect(process.listenerCount('uncaughtException')).toBeGreaterThan(0);
-      expect(process.listenerCount('unhandledRejection')).toBeGreaterThan(0);
-    });
-
-    it('should not register shutdown handlers multiple times', async () => {
-      await client.start();
-      const sigTermCount = process.listenerCount('SIGTERM');
-
-      await client.start();
-
-      expect(process.listenerCount('SIGTERM')).toBe(sigTermCount);
-    });
-
     it('should handle context initialization failure', async () => {
       const contextError = new Error('Context init failed');
       mockContext.init.mockRejectedValue(contextError);
@@ -310,56 +289,6 @@ describe('RPClient', () => {
       mockContext.dispose.mockRejectedValue(disposalError);
 
       await expect(client.stop()).rejects.toThrow('Disposal failed');
-    });
-  });
-
-  describe('graceful shutdown handling', () => {
-    let client: RPClient;
-
-    beforeEach(() => {
-      client = RPClient.create(testClientOptions, testNatives, mockPlatformAdapter);
-    });
-
-    it('should register shutdown signal handlers after start', async () => {
-      const originalSigTermCount = process.listenerCount('SIGTERM');
-      const originalSigIntCount = process.listenerCount('SIGINT');
-      const originalSigHupCount = process.listenerCount('SIGHUP');
-      const originalUncaughtCount = process.listenerCount('uncaughtException');
-      const originalUnhandledCount = process.listenerCount('unhandledRejection');
-
-      await client.start();
-
-      expect(process.listenerCount('SIGTERM')).toBeGreaterThan(originalSigTermCount);
-      expect(process.listenerCount('SIGINT')).toBeGreaterThan(originalSigIntCount);
-      expect(process.listenerCount('SIGHUP')).toBeGreaterThan(originalSigHupCount);
-      expect(process.listenerCount('uncaughtException')).toBeGreaterThan(originalUncaughtCount);
-      expect(process.listenerCount('unhandledRejection')).toBeGreaterThan(originalUnhandledCount);
-    });
-
-    it('should not register shutdown handlers multiple times', async () => {
-      await client.start();
-      const sigTermCount = process.listenerCount('SIGTERM');
-      const sigIntCount = process.listenerCount('SIGINT');
-
-      await client.start(); // Second start call
-
-      expect(process.listenerCount('SIGTERM')).toBe(sigTermCount);
-      expect(process.listenerCount('SIGINT')).toBe(sigIntCount);
-    });
-
-    it('should handle graceful shutdown sequence correctly', async () => {
-      const client = RPClient.create(testClientOptions, testNatives, mockPlatformAdapter);
-      const mockStop = jest.spyOn(client, 'stop').mockResolvedValue();
-
-      await client.start();
-
-      const gracefulShutdown = (client as unknown as { registerShutdownHandlers: () => void })
-        .registerShutdownHandlers;
-      expect(typeof gracefulShutdown).toBe('function');
-
-      expect(mockStop).not.toHaveBeenCalled();
-
-      mockStop.mockRestore();
     });
   });
 

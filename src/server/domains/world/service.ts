@@ -314,7 +314,7 @@ export class WorldService extends RPServerService {
         return false;
       }
 
-      this.platformAdapter.network.emitToPlayer(playerId, 'camera:set', {
+      this.platformAdapter.network.emitToPlayer(playerId, 'cameraSet', {
         id: camera.id,
         type: camera.type,
         position: camera.static?.position || { x: 0, y: 0, z: 0 },

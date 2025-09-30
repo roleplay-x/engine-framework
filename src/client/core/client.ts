@@ -229,7 +229,7 @@ export class RPClient {
    *
    * This method sets up handlers for SIGINT, SIGTERM, and uncaught exceptions
    * to ensure the client shuts down gracefully when the process is terminated.
-   * The handlers are only registered once per client instance.
+   * The handlers are only registered once per client instance and only in Node.js environments.
    *
    * @private
    */
@@ -237,26 +237,6 @@ export class RPClient {
     if (this.shutdownHandlersRegistered) {
       return;
     }
-
-    const gracefulShutdown = async (signal: string) => {
-      console.log(`Received ${signal}, shutting down gracefully...`);
-      await this.stop();
-      process.exit(0);
-    };
-
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
-    process.on('uncaughtException', async (error) => {
-      console.error('Uncaught Exception:', error);
-      await this.stop();
-      process.exit(1);
-    });
-    process.on('unhandledRejection', async (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      await this.stop();
-      process.exit(1);
-    });
 
     this.shutdownHandlersRegistered = true;
   }

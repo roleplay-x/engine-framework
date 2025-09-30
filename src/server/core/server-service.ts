@@ -5,8 +5,10 @@ import { RPLogger } from '../../core/logger';
 import { RPHookBus } from '../../core/bus/hook-bus';
 
 import { RPServerEvents } from './events/events';
-import { getEventHandlers } from './events/decorators';
+import { getEventHandlers, getClientEventHandlers } from './events/decorators';
+import { RPClientToServerEvents } from '../../shared/types';
 import { IServiceContext, ServerTypes, ServiceConstructor } from './types';
+import { PlayerId } from '../domains/session/models/session';
 
 /**
  * Type definition for server event handler methods.
@@ -14,6 +16,15 @@ import { IServiceContext, ServerTypes, ServiceConstructor } from './types';
  */
 export type RPServerEventHandlerMethods<Events = RPServerEvents> = {
   [K in keyof Events]?: (payload: Events[K]) => void | Promise<void>;
+};
+
+/**
+ * Type definition for client event handler methods.
+ * Maps client event names to their corresponding handler functions.
+ * The first parameter will always be the playerId, followed by the event data.
+ */
+export type RPClientEventHandlerMethods<Events = RPClientToServerEvents> = {
+  [K in keyof Events]?: (playerId: PlayerId, payload: Events[K]) => void | Promise<void>;
 };
 
 /**
@@ -58,6 +69,7 @@ export type RPServerEventHandlerMethods<Events = RPServerEvents> = {
 
 export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
   public readonly eventHandlers: RPServerEventHandlerMethods<T['events']>;
+  public readonly clientEventHandlers: RPClientEventHandlerMethods<RPClientToServerEvents>;
   protected readonly eventEmitter: RPEventEmitter<T['events']>;
   protected readonly hookBus: RPHookBus<T['hooks']>;
   protected readonly logger: RPLogger;
@@ -77,6 +89,7 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
     this.hookBus = context.hookBus;
     this.logger = context.logger;
     this.eventHandlers = this.bindEventEmitters(context.eventEmitter);
+    this.clientEventHandlers = this.bindClientEventHandlers();
   }
 
   /**
@@ -133,6 +146,47 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
     }
 
     return handlerMethods;
+  }
+
+  /**
+   * Scans the service instance for @OnClient decorated methods and binds them to client events.
+   * This method should be overridden by platform-specific implementations to actually
+   * register the event handlers with the platform's event system.
+   *
+   * @private
+   * @returns A map of client event names to their bound handler functions
+   */
+  private bindClientEventHandlers(): RPClientEventHandlerMethods<RPClientToServerEvents> {
+    const handlers = getClientEventHandlers<RPClientToServerEvents>(this) || [];
+    const handlerMethods: RPClientEventHandlerMethods<RPClientToServerEvents> = {};
+    
+    for (const { method, event } of handlers) {
+      const fn = (this as Record<string, unknown>)[method];
+      if (typeof fn === 'function') {
+        handlerMethods[event] = fn.bind(this);
+        
+        this.registerClientEventHandler(event as string, fn.bind(this));
+      }
+    }
+
+    return handlerMethods;
+  }
+
+  /**
+   * Registers a client event handler with the platform.
+   * Uses the platform adapter's network interface to register client events.
+   * The first parameter passed to the handler will always be the playerId.
+   *
+   * @protected
+   * @param event - The event name
+   * @param handler - The event handler function
+   */
+  protected registerClientEventHandler(event: string, handler: (...args: any[]) => void): void {
+    if (this.context.platformAdapter?.network?.onClientEvent) {
+      this.context.platformAdapter.network.onClientEvent(event, (playerId: PlayerId, ...args) => {
+        handler(playerId, ...args);
+      });
+    }
   }
 
   /**

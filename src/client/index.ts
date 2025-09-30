@@ -8,7 +8,7 @@ export * from './core/client';
 export * from './core/context';
 export * from './core/entities/player';
 export * from './core/events/decorators';
-export * from './core/events/types';
+export * from '../shared/types';
 export * from './core/hooks/hooks';
 export * from './core/types';
 export * from './domains/camera/service';

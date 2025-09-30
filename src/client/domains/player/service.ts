@@ -1,9 +1,9 @@
 import { RPClientService } from '../../core/client-service';
 import { ClientPlayer } from '../../core/entities/player';
 import { OnClient, OnServer } from '../../core/events/decorators';
-import { RPAllClientEvents, RPServerToClientEvents } from '../../core/events/types';
 import { ClientTypes } from '../../core/types';
 import { Vector3 } from '../../../shared';
+import { RPClientToServerEvents } from '../../../shared/types';
 
 /**
  * Service for managing player-related functionality in the roleplay client.
@@ -29,6 +29,12 @@ export class PlayerService extends RPClientService<ClientTypes> {
    */
   public async init(): Promise<void> {
     this.logger.info('Initializing player service...');
+
+    const playerReadyPayload: RPClientToServerEvents['playerReady'] = {
+      playerId: this.getPlayerId(),
+    };
+    console.log('playerReadyPayload', playerReadyPayload);
+    this.platformAdapter.network.emitToServer('playerReady', playerReadyPayload);
     await super.init();
   }
 
@@ -256,58 +262,5 @@ export class PlayerService extends RPClientService<ClientTypes> {
    */
   public resurrectLocalPlayer(position: any, heading: number): void {
     this.platformAdapter.player.resurrectLocalPlayer(position, heading);
-  }
-
-  /**
-   * Handles player spawned event.
-   *
-   * @param data - Player spawn data
-   */
-  @OnClient('player:spawned')
-  private onPlayerSpawned(data: RPAllClientEvents['player:spawned']): void {
-    this.logger.info('Player spawned:', data);
-
-    this.setEntityPosition(this.getPlayerPed(), data.position);
-    this.setEntityHeading(this.getPlayerPed(), data.heading);
-
-    this.playerHealth = 100;
-  }
-
-  /**
-   * Handles player died event.
-   *
-   * @param data - Player death data
-   */
-  @OnClient('player:died')
-  private onPlayerDied(data: RPAllClientEvents['player:died']): void {
-    this.logger.info('Player died:', data);
-    this.playerHealth = 0;
-  }
-
-  /**
-   * Handles server player joined event.
-   *
-   * @param data - Player join data
-   */
-  @OnServer('playerJoined')
-  private onPlayerJoined(data: RPServerToClientEvents['playerJoined']): void {
-    this.logger.info('Player joined server:', data);
-
-    if (data.playerId === this.getPlayerId()) {
-      const player = ClientPlayer.create(data.playerId, data.sessionId);
-
-      this.setCurrentPlayer(player);
-      this.logger.info('Current player created with sessionId:', data.sessionId);
-    }
-  }
-
-  /**
-   * Handles server player left event.
-   *
-   * @param data - Player leave data
-   */
-  @OnServer('playerLeft')
-  private onPlayerLeft(data: RPServerToClientEvents['playerLeft']): void {
-    this.logger.info('Player left server:', data);
   }
 }

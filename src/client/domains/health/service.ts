@@ -1,7 +1,7 @@
 import { RPClientService } from '../../core/client-service';
 import { OnClient, OnServer, OnGameEvent } from '../../core/events/decorators';
 import { ClientTypes } from '../../core/types';
-import { RPServerToClientEvents } from '../../core/events/types';
+import { RPServerToClientEvents } from '../../../shared/types';
 
 /**
  * Service for managing player health in the roleplay client.

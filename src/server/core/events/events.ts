@@ -1,4 +1,5 @@
 import { RPPlayerConnecting } from '../../natives/events/player/player-connecting';
+import { RPPlayerReady } from '../../natives/events/player/player-ready';
 import { RPSessionFinished } from '../../domains/session/events/session-finished';
 import { RPSessionStarted } from '../../domains/session/events/session-started';
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
@@ -51,6 +52,7 @@ export interface RPServerEvents {
 
   // NATIVE
   playerConnecting: RPPlayerConnecting;
+  playerReady: RPPlayerReady;
   playerDisconnected: RPPlayerDisconnected;
 
   // SOCKET
