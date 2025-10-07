@@ -70,7 +70,7 @@ export class SpawnService extends RPClientService<ClientTypes> {
       spawnPointId: options.spawnPointId,
     };
 
-    this.eventService.emitToServer('spawn:request', payload);
+    this.eventService.emitToServer('spawnRequest', payload);
   }
 
   /**
@@ -114,7 +114,7 @@ export class SpawnService extends RPClientService<ClientTypes> {
       this.eventService.emit('player:spawned', data);
     } catch (error) {
       this.logger.error('Spawn execution failed:', error);
-      this.eventService.emitToServer('spawn:failed', {
+      this.eventService.emitToServer('spawnFailed', {
         error: error instanceof Error ? error.message : 'Unknown spawn error',
       });
     }

@@ -71,10 +71,10 @@ describe('EventService Hooks', () => {
     it('should call hookBus.trigger for server events', () => {
       const eventHandler = jest.fn();
 
-      eventService.onServerEvent('testServerEvent', eventHandler);
+      eventService.onServerEvent('playerSpawned', eventHandler);
 
       expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
-        'testServerEvent',
+        'playerSpawned',
         expect.any(Function),
       );
     });

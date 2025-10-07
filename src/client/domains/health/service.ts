@@ -97,7 +97,7 @@ export class HealthService extends RPClientService<ClientTypes> {
           isFatal: currentHealth <= 0,
         });
 
-        this.eventService.emitToServer('player:damage', {
+        this.eventService.emitToServer('playerDamage', {
           attackerId: attacker,
           damageAmount,
           weaponHash,

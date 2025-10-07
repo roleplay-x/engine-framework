@@ -344,7 +344,7 @@ export class WorldService extends RPServerService {
    */
   public async releaseCameraForPlayer(playerId: PlayerId): Promise<boolean> {
     try {
-      this.platformAdapter.network.emitToPlayer(playerId, 'camera:release');
+      this.platformAdapter.network.emitToPlayer(playerId, 'cameraRelease', undefined);
 
       this.logger.info(`Camera released for player ${playerId}`);
       return true;

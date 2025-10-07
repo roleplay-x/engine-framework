@@ -1,5 +1,6 @@
 import { RPClientService } from '../../core/client-service';
 import { GameEventName, GameEventArgs } from '../../natives/events/game-events';
+import { RPServerToClientEvents, RPClientToServerEvents } from '../../../shared/types';
 import { ClientTypes } from '../../core/types';
 import {
   ClientEventHookData,
@@ -49,25 +50,28 @@ export class EventService extends RPClientService<ClientTypes> {
   }
 
   /**
-   * Listens for server events.
+   * Listens for type-safe server events.
    *
    * @param event - Event name to listen for
-   * @param handler - Event handler function
+   * @param handler - Event handler function with typed data
    */
-  public onServerEvent(event: string, handler: (...args: any[]) => void): void {
-    const wrappedHandler = async (...args: any[]) => {
-      const shouldContinue = await this.executeServerEventHooks(event, args, 'before');
+  public onServerEvent<K extends keyof RPServerToClientEvents>(
+    event: K,
+    handler: (data: RPServerToClientEvents[K]) => void
+  ): void {
+    const wrappedHandler = async (data: RPServerToClientEvents[K]) => {
+      const shouldContinue = await this.executeServerEventHooks(event as string, data, 'before');
       if (!shouldContinue) {
         return;
       }
 
       try {
-        handler(...args);
+        handler(data);
       } catch (error) {
-        this.logger.error(`Error in server event handler for '${event}':`, error);
+        this.logger.error(`Error in server event handler for '${String(event)}':`, error);
       }
 
-      await this.executeServerEventHooks(event, args, 'after');
+      await this.executeServerEventHooks(event as string, data, 'after');
     };
 
     this.platformAdapter.network.onServerEvent(event, wrappedHandler);
@@ -79,18 +83,24 @@ export class EventService extends RPClientService<ClientTypes> {
    * @param event - Event name
    * @param handler - Event handler function to remove
    */
-  public offServerEvent(event: string, handler: (...args: any[]) => void): void {
+  public offServerEvent<K extends keyof RPServerToClientEvents>(
+    event: K,
+    handler: (data: RPServerToClientEvents[K]) => void
+  ): void {
     this.platformAdapter.network.onServerEvent(event, handler);
   }
 
   /**
-   * Emits events to the server.
+   * Emits type-safe events to the server.
    *
    * @param event - Event name to emit
-   * @param args - Event arguments
+   * @param data - Event data with correct type
    */
-  public emitToServer(event: string, ...args: any[]): void {
-    this.platformAdapter.network.emitToServer(event, ...args);
+  public emitToServer<K extends keyof RPClientToServerEvents>(
+    event: K,
+    data: RPClientToServerEvents[K]
+  ): void {
+    this.platformAdapter.network.emitToServer(event, data);
   }
 
   /**

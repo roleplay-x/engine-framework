@@ -2,6 +2,7 @@
  * Client event types for type safety
  */
 
+import { CameraType } from '@roleplayx/engine-sdk';
 import { PlayerId } from '../server/domains/session/models/session';
 
 export interface RPClientEvents {
@@ -22,6 +23,9 @@ export interface RPServerToClientEvents {
   'player:initialize': SpawnData;
   'cameraSet': CameraData;
   'cameraRelease': void;
+  'serverConfig': {
+    serverName: string;
+  };
   'webviewConfigureShell': { shellUrl: string };
   'webviewShowScreen': {
     screen: string;
@@ -76,7 +80,7 @@ export interface RPClientToServerEvents {
 
 export interface CameraData {
   id: string;
-  type: 'static' | 'follow' | 'orbit' | 'cinematic';
+  type: CameraType;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
   fov: number;

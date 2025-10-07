@@ -36,4 +36,8 @@ export interface ICoreAdapter {
   displayHud(display: boolean): void;
   displayRadar(display: boolean): void;
   isHudHidden(): boolean;
+
+  // Tick Management
+  setTick(callback: () => void): number;
+  clearTick(tickId: number): void;
 }

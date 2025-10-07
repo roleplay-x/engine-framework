@@ -59,6 +59,6 @@ export class ServerPlayer extends BasePlayer {
     event: K,
     data: RPServerToClientEvents[K],
   ): void {
-    this.platformAdapter.network.emitToPlayer(this.id, event as string, data);
+    this.platformAdapter.network.emitToPlayer(this.id, event, data);
   }
 }

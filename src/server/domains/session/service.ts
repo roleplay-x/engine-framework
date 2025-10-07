@@ -23,6 +23,7 @@ import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
 import { RPServerEvents } from '../../core/events/events';
 import { WebViewService } from '../webview/service';
+import { ConfigurationService } from '../configuration/service';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -228,6 +229,14 @@ export class SessionService extends RPServerService {
 
       const tokenHash = generateSessionTokenHash(sessionId, token);
       this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
+
+      const configurationService = this.getService(ConfigurationService);
+      const serverNameConfig = configurationService.getConfig(ConfigKey.Name);
+      const serverName = serverNameConfig?.value ?? 'Unknown Server';
+
+      this.context.platformAdapter.network.emitToClient(playerId, 'serverConfig', {
+        serverName: String(serverName),
+      });
 
       this.eventEmitter.emit('sessionStarted', { sessionId, sessionToken: token });
       this.logger.info(`Player ${sessionId} (ID: ${playerId}) connected and joined with IP ${ipAddress}`);

@@ -166,7 +166,7 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
       if (typeof fn === 'function') {
         handlerMethods[event] = fn.bind(this);
         
-        this.registerClientEventHandler(event as string, fn.bind(this));
+        this.registerClientEventHandler(event, fn.bind(this));
       }
     }
 
@@ -182,11 +182,12 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
    * @param event - The event name
    * @param handler - The event handler function
    */
-  protected registerClientEventHandler(event: string, handler: (...args: any[]) => void): void {
+  protected registerClientEventHandler<K extends keyof RPClientToServerEvents>(
+    event: K,
+    handler: (playerId: PlayerId, data: RPClientToServerEvents[K]) => void
+  ): void {
     if (this.context.platformAdapter?.network?.onClientEvent) {
-      this.context.platformAdapter.network.onClientEvent(event, (playerId: PlayerId, ...args) => {
-        handler(playerId, ...args);
-      });
+      this.context.platformAdapter.network.onClientEvent(event, handler);
     }
   }
 

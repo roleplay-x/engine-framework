@@ -34,7 +34,7 @@ export class PlayerService extends RPClientService<ClientTypes> {
       playerId: this.getPlayerId(),
     };
 
-    this.platformAdapter.network.emitToServer('playerReady', playerReadyPayload);
+    this.platformAdapter.network.emitToServer('playerReady', {});
     await super.init();
   }
 
