@@ -154,7 +154,7 @@ describe('HealthService', () => {
 
       healthService['onEntityDamage'](playerPed, attacker, weaponHash, damage);
 
-      expect(mockEventService.emitToServer).toHaveBeenCalledWith('player:damage', {
+      expect(mockEventService.emitToServer).toHaveBeenCalledWith('playerDamage', {
         attackerId: attacker,
         damageAmount: 100, // 100 - 0 = 100
         weaponHash,

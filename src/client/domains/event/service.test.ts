@@ -54,21 +54,12 @@ describe('EventService', () => {
   describe('onServerEvent', () => {
     it('should delegate to platform adapter network', () => {
       const handler = jest.fn();
-      eventService.onServerEvent('testEvent', handler);
+      eventService.onServerEvent('playerSpawned', handler);
 
       expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
-        'testEvent',
+        'playerSpawned',
         expect.any(Function),
       );
-    });
-  });
-
-  describe('offServerEvent', () => {
-    it('should delegate to platform adapter network', () => {
-      const handler = jest.fn();
-      eventService.offServerEvent('testEvent', handler);
-
-      expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith('testEvent', handler);
     });
   });
 
@@ -151,12 +142,11 @@ describe('EventService', () => {
 
   describe('emitToServer', () => {
     it('should delegate to platform adapter network', () => {
-      eventService.emitToServer('testEvent', 'arg1', 'arg2');
+      eventService.emitToServer('playerReady', 'arg1');
 
       expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith(
-        'testEvent',
-        'arg1',
-        'arg2',
+        'playerReady',
+        'arg1'
       );
     });
   });
@@ -260,15 +250,15 @@ describe('EventService', () => {
     });
 
     it('should handle server communication', () => {
-      eventService.emitToServer('playerReady', { playerId: '123' });
-      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith('playerReady', {
-        playerId: '123',
-      });
+      // Client'tan server'a event gönderme (doğru type ile)
+      eventService.emitToServer('playerReady', {});
+      expect(mockPlatformAdapter.network.emitToServer).toHaveBeenCalledWith('playerReady', {});
 
+      // Server'dan client'a event dinleme (var olan event ile)
       const serverHandler = jest.fn();
-      eventService.onServerEvent('playerData', serverHandler);
+      eventService.onServerEvent('playerSpawned', serverHandler);
       expect(mockPlatformAdapter.network.onServerEvent).toHaveBeenCalledWith(
-        'playerData',
+        'playerSpawned',
         expect.any(Function),
       );
     });

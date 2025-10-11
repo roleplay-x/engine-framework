@@ -327,7 +327,7 @@ describe('RPClient', () => {
         CameraService,
       ];
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(6);
+      expect(mockContext.addService).toHaveBeenCalledTimes(7);
       serviceOrder.forEach((Service, index) => {
         expect(mockContext.addService).toHaveBeenNthCalledWith(index + 1, Service);
       });
