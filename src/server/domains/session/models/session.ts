@@ -20,4 +20,5 @@ export interface RPSession {
   character?: SessionInfoCharacter;
   account?: SessionInfoAccount;
   hash?: string;
+  token: string;
 }

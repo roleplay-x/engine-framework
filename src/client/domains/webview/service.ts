@@ -215,10 +215,16 @@ export class WebViewService extends RPClientService<ClientTypes> {
   }
 
   private setupShellProtocol(): void {
-    this.platformAdapter.webview.registerWebViewCallback('webviewShellReady', () => {
+    this.platformAdapter.webview.registerWebViewCallback('webviewShellReady', async () => {
       this.logger.info('Shell is ready');
       this.shellReady = true;
       this.platformAdapter.network.emitToServer('webviewShellReady', {});
+      
+      if (!this.contextSent) {
+        await this.sendInitialContext();
+      }
+      
+      this.processScreenQueue();
     });
 
     this.platformAdapter.webview.registerWebViewCallback('webviewScreenReady', (data: any) => {

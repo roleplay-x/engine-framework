@@ -1,18 +1,21 @@
 import { Vector3 } from '../../../shared';
 import { BasePlayer } from '../../../shared';
 import { RPServerToClientEvents } from '../../../shared/types';
+import { RPServer } from '../../server';
 import { PlatformAdapter } from '../adapters';
 
 export class ServerPlayer extends BasePlayer {
   private readonly sessionId: string;
   public readonly ip: string;
-  private readonly platformAdapter: PlatformAdapter;
 
-  constructor(id: string, sessionId: string, ip: string, platformAdapter: PlatformAdapter) {
+  private readonly token: string;
+  private readonly platformAdapter: PlatformAdapter = RPServer.get().getContext().platformAdapter;
+
+  constructor(id: string, sessionId: string, ip: string, token: string) {
     super(id);
     this.sessionId = sessionId;
     this.ip = ip;
-    this.platformAdapter = platformAdapter;
+    this.token = token;
   }
 
   /**
@@ -21,16 +24,16 @@ export class ServerPlayer extends BasePlayer {
    * @param id - Player ID
    * @param sessionId - Session ID
    * @param ip - Player IP
-   * @param platformAdapter - Platform adapter instance
+   * @param token - Player token
    * @returns New ServerPlayer instance
    */
   public static create(
     id: string,
     sessionId: string,
     ip: string,
-    platformAdapter: PlatformAdapter,
+    token: string,
   ): ServerPlayer {
-    return new ServerPlayer(id, sessionId, ip, platformAdapter);
+    return new ServerPlayer(id, sessionId, ip, token);
   }
 
   public getPosition(): Vector3 {

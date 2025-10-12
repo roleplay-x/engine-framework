@@ -234,7 +234,7 @@ export class SessionService extends RPServerService {
       const { token } = await this.getEngineApi(SessionApi).startSession(sessionId, { ipAddress });
 
       const tokenHash = generateSessionTokenHash(sessionId, token);
-      this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash);
+      this.createPlayerSession(sessionId, playerId, ipAddress, tokenHash, token);
 
       const configurationService = this.getService(ConfigurationService);
       const serverNameConfig = configurationService.getConfig(ConfigKey.Name);
@@ -268,7 +268,6 @@ export class SessionService extends RPServerService {
     }
 
     this.getService(WorldService).setLoginCamera(player.id);
-    this.getService(WebViewService).configureShell(player);
   }
 
   @OnServer('playerDisconnected')
@@ -371,8 +370,13 @@ export class SessionService extends RPServerService {
 
     try {
       const sessionInfo = await this.getEngineApi(SessionApi).getActiveSessionInfo(sessionId);
+      const currentSession = this.sessions.get(sessionId);
+      if (!currentSession) {
+        return;
+      }
+
       this.sessions.set(sessionId, {
-        ...(this.sessions.get(sessionId) ?? { id: sessionId }),
+        ...currentSession,
         ...sessionInfo,
       });
       return this.sessions.get(sessionId);
@@ -413,14 +417,15 @@ export class SessionService extends RPServerService {
     playerId: string,
     ip: string,
     tokenHash: string,
+    token: string,
   ): void {
     if (this.sessionToPlayer.has(sessionId)) {
       throw new Error(`Session ${sessionId} already has an associated player`);
     }
 
-    const player = ServerPlayer.create(playerId, sessionId, ip, this.context.platformAdapter);
+    const player = ServerPlayer.create(playerId, sessionId, ip, token);
     this.sessionToPlayer.set(sessionId, player);
-    this.sessions.set(sessionId, { id: sessionId, tokenHash });
+    this.sessions.set(sessionId, { id: sessionId, tokenHash, token });
   }
 
   /**
@@ -441,6 +446,15 @@ export class SessionService extends RPServerService {
     return this.sessionToPlayer.get(sessionId);
   }
 
+  public getPlayerByPlayerId(playerId: string): ServerPlayer | undefined {
+    for (const [sessionId, player] of this.sessionToPlayer.entries()) {
+      if (player.id === playerId) {
+        return player;
+      }
+    }
+    return undefined;
+  }
+  
   /**
    * Retrieves the session ID associated with a player.
    *
@@ -455,10 +469,10 @@ export class SessionService extends RPServerService {
    * }
    * ```
    */
-  public getSessionByPlayer(playerId: string): ServerPlayer | undefined {
+  public getSessionByPlayer(playerId: string): RPSession | undefined {
     for (const [sessionId, player] of this.sessionToPlayer.entries()) {
       if (player.id === playerId) {
-        return player;
+        return this.sessions.get(sessionId);
       }
     }
     return undefined;

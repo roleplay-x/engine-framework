@@ -10,4 +10,5 @@ export interface IPlayerAdapter {
   getPlayerPosition(playerId: PlayerId): Vector3;
   setPlayerPosition(playerId: PlayerId, position: Vector3): void;
   getPlayerHealth(playerId: PlayerId): number;
+  getPlayerDiscordId(playerId: PlayerId): string;
 }

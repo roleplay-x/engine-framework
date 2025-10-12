@@ -178,6 +178,21 @@ export class RPServerContext<
   }
 
   /**
+   * Gets the engine client instance.
+   *
+   * @returns The engine client used by this context
+   *
+   * @example
+   * ```typescript
+   * const engineClient = context.getEngineClient();
+   * const apiUrl = engineClient.getApiUrl();
+   * ```
+   */
+  public getEngineClient(): EngineClient {
+    return this.engineClient;
+  }
+
+  /**
    * Gets a roleplay engine API instance with automatic caching.
    *
    * This method implements the singleton pattern for API instances, ensuring that

@@ -1,7 +1,7 @@
 import { RPServerService } from '../../core/server-service';
 import { OnClient, OnHook, OnServer } from '../../core/events/decorators';
 import { SessionService } from '../session/service';
-import { PlayerId } from '../session/models/session';
+import { PlayerId, RPSession, SessionId } from '../session/models/session';
 import { RPClientToServerEvents } from '../../../shared/types';
 import { RPServer } from '../../server';
 import { ServerPlayer } from '../../natives/entitites';
@@ -12,29 +12,12 @@ export class WebViewService extends RPServerService {
     await super.init();
   }
 
-  public configureShell(player: ServerPlayer): void {
-    this.logger.info('Configuring shell for player:', player.id);
-
-    let shellUrl = RPServer.get().getShellUrl();
-    if (!shellUrl) {
-      this.logger.warn('Shell URL is not configured, using fallback development URL');
-      shellUrl = this.getDevelopmentFallbackUrl();
-    }
-
-    player.emit('webviewConfigureShell', {
-      shellUrl,
-    });
-
-    this.logger.info(`Shell configured for player ${player.id} with URL: ${shellUrl}`);
-  }
-
   @OnServer('sessionStarted')
   private async onSessionStarted(data: {
     sessionId: string;
-    accountId: string;
-    characterId: string;
+    sessionToken: string;
   }): Promise<void> {
-    this.logger.info('Character linked, configuring shell:', data);
+    this.logger.info('Session started, configuring shell and showing LOGIN screen:', data);
 
     const player = this.getService(SessionService).getPlayerBySession(data.sessionId);
     if (!player) {
@@ -42,24 +25,33 @@ export class WebViewService extends RPServerService {
       return;
     }
 
-    let shellUrl = RPServer.get().getShellUrl();
-    if (!shellUrl) {
-      this.logger.warn('Shell URL is not configured, using fallback development URL');
-      shellUrl = this.getDevelopmentFallbackUrl();
+    const session = this.getService(SessionService).getSessionByPlayer(player.id);
+    if (!session) {
+      this.logger.error(`Session not found for player: ${player.id}`);
+      return;
     }
 
+    const shellUrl = this.buildShellUrl(session);
     player.emit('webviewConfigureShell', {
       shellUrl,
     });
 
     this.logger.info(`Shell configured for player ${player.id} with URL: ${shellUrl}`);
+
+    this.showScreen(player.id, 'LOGIN', {
+      sessionId: data.sessionId,
+      sessionToken: data.sessionToken,
+    });
+
+    this.logger.info(`LOGIN screen shown for player ${player.id}`);
   }
 
-  private getDevelopmentFallbackUrl(): string {
-    const resourceName = this.context.platformAdapter.core.getResourceName();
-    return `nui://${resourceName}/ui/fallback-shell.html`;
+  private buildShellUrl(session: RPSession): string {
+    const shellUrl = RPServer.get().getShellUrl();
+    const apiUrl = RPServer.get().getContext().getEngineClient().getApiUrl();
+    const serverId = RPServer.get().getContext().getEngineClient().getServerId();
+    return shellUrl+`?engineApiUrl=${apiUrl}&serverId=${serverId}&sessionId=${session.id}&sessionToken=${session.token}&gamemodeApiUrl=http://localhost:3000`;
   }
-
 
   @OnClient('webviewShellReady')
   private onShellReady(playerId: PlayerId): void {
@@ -138,8 +130,7 @@ export class WebViewService extends RPServerService {
     transition?: 'fade' | 'slide' | 'none',
   ): void {
     const sessionService = this.getService(SessionService);
-    const player = sessionService.getSessionByPlayer(playerId);
-
+    const player = sessionService.getPlayerByPlayerId(playerId);
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
       return;
@@ -154,7 +145,7 @@ export class WebViewService extends RPServerService {
 
   public hideScreen(playerId: PlayerId, screen: string): void {
     const sessionService = this.getService(SessionService);
-    const player = sessionService.getSessionByPlayer(playerId);
+    const player = sessionService.getPlayerByPlayerId(playerId);
 
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
@@ -166,7 +157,7 @@ export class WebViewService extends RPServerService {
 
   public closeScreen(playerId: PlayerId, screen: string): void {
     const sessionService = this.getService(SessionService);
-    const player = sessionService.getSessionByPlayer(playerId);
+    const player = sessionService.getPlayerByPlayerId(playerId);
 
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
@@ -178,7 +169,7 @@ export class WebViewService extends RPServerService {
 
   public updateScreen(playerId: PlayerId, screen: string, data: Record<string, any>): void {
     const sessionService = this.getService(SessionService);
-    const player = sessionService.getSessionByPlayer(playerId);
+    const player = sessionService.getPlayerByPlayerId(playerId);
 
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
@@ -193,7 +184,7 @@ export class WebViewService extends RPServerService {
 
   public sendMessage(playerId: PlayerId, screen: string, event: string, data: any): void {
     const sessionService = this.getService(SessionService);
-    const player = sessionService.getSessionByPlayer(playerId);
+    const player = sessionService.getPlayerByPlayerId(playerId);
 
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
