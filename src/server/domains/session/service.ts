@@ -1,11 +1,11 @@
 import {
   AccessPolicy,
   AuthorizeSessionRequest,
+  ConfigKey,
   EngineError,
   LinkCharacterToSessionRequest,
   SessionApi,
   SessionEndReason,
-  ConfigKey,
 } from '@roleplayx/engine-sdk';
 
 import { SocketSessionStarted } from '../../socket/events/socket-session-started';
@@ -17,13 +17,19 @@ import { SocketSessionCharacterLinked } from '../../socket/events/socket-session
 import { SocketSessionUpdated } from '../../socket/events/socket-session-updated';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../core/errors';
 import { ReferenceService } from '../reference/service';
-
-import { generateSessionId, generateSessionTokenHash, PlayerId, RPSession, SessionId } from './models/session';
 import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
 import { RPServerEvents } from '../../core/events/events';
 import { WebViewService } from '../webview/service';
 import { ConfigurationService } from '../configuration/service';
+
+import {
+  generateSessionId,
+  generateSessionTokenHash,
+  PlayerId,
+  RPSession,
+  SessionId,
+} from './models/session';
 
 /**
  * Service for managing player sessions in the roleplay server.
@@ -239,8 +245,11 @@ export class SessionService extends RPServerService {
       });
 
       this.eventEmitter.emit('sessionStarted', { sessionId, sessionToken: token });
-      this.logger.info(`Player ${sessionId} (ID: ${playerId}) connected and joined with IP ${ipAddress}`);
-    } catch {
+      this.logger.info(
+        `Player ${sessionId} (ID: ${playerId}) connected and joined with IP ${ipAddress}`,
+      );
+    } catch (error) {
+      this.logger.error(`Session terminated for playerId ${playerId} due to error:`, error);
       this.eventEmitter.emit('sessionFinished', {
         sessionId,
         endReason: SessionEndReason.SessionInitFailed,

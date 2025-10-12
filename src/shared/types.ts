@@ -3,47 +3,48 @@
  */
 
 import { CameraType } from '@roleplayx/engine-sdk';
+
 import { PlayerId } from '../server/domains/session/models/session';
 
 export interface RPClientEvents {
-  'playerReady': void;
+  playerReady: void;
 }
 
 export interface RPServerToClientEvents {
-  'playerSpawned': {
+  playerSpawned: {
     data: { position: { x: number; y: number; z: number }; heading: number };
   };
-  'playerDied': { position: { x: number; y: number; z: number } };
+  playerDied: { position: { x: number; y: number; z: number } };
   playerJoined: { ipAddress: string; sessionId: string };
   playerLeft: { reason: string };
   'health:set': number;
   'health:validate': number;
-  'spawnExecute': SpawnData;
+  spawnExecute: SpawnData;
   'spawn:failed': { error: string };
   'player:initialize': SpawnData;
-  'cameraSet': CameraData;
-  'cameraRelease': void;
-  'serverConfig': {
+  cameraSet: CameraData;
+  cameraRelease: void;
+  serverConfig: {
     serverName: string;
   };
-  'webviewConfigureShell': { shellUrl: string };
-  'webviewShowScreen': {
+  webviewConfigureShell: { shellUrl: string };
+  webviewShowScreen: {
     screen: string;
     data?: Record<string, any>;
     transition?: 'fade' | 'slide' | 'none';
   };
-  'webviewHideScreen': { screen: string };
-  'webviewCloseScreen': { screen: string };
-  'webviewUpdateScreen': {
+  webviewHideScreen: { screen: string };
+  webviewCloseScreen: { screen: string };
+  webviewUpdateScreen: {
     screen: string;
     data: Record<string, any>;
   };
-  'webviewSendMessage': {
+  webviewSendMessage: {
     screen: string;
     event: string;
     data: any;
   };
-  'webviewSetContext': {
+  webviewSetContext: {
     player: Record<string, any>;
     config: Record<string, any>;
     localization: Record<string, any>;
@@ -51,31 +52,31 @@ export interface RPServerToClientEvents {
 }
 
 export interface RPClientToServerEvents {
-  'playerReady': {};
-  'playerSpawned': { data: { position: { x: number; y: number; z: number }; heading: number } };
-  'playerDied': { position: { x: number; y: number; z: number } };
-  'playerDamage': {
+  playerReady: {};
+  playerSpawned: { data: { position: { x: number; y: number; z: number }; heading: number } };
+  playerDied: { position: { x: number; y: number; z: number } };
+  playerDamage: {
     attackerId: PlayerId;
     damageAmount: number;
     weaponHash: number;
     isFatal: boolean;
     timestamp: number;
   };
-  'spawnRequest': { spawnPointId?: string };
-  'spawnFailed': { error: string };
-  'webviewShellReady': {};
-  'webviewScreenReady': { screen: string };
-  'webviewScreenInitialized': { screen: string };
-  'webviewScreenAction': {
+  spawnRequest: { spawnPointId?: string };
+  spawnFailed: { error: string };
+  webviewShellReady: {};
+  webviewScreenReady: { screen: string };
+  webviewScreenInitialized: { screen: string };
+  webviewScreenAction: {
     screen: string;
     action: string;
     payload: any;
   };
-  'webviewScreenError': {
+  webviewScreenError: {
     screen: string;
     error: string;
   };
-  'webviewScreenClosed': { screen: string };
+  webviewScreenClosed: { screen: string };
 }
 
 export interface CameraData {
