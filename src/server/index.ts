@@ -34,6 +34,7 @@ export * from './domains/account/service';
 export * from './domains/character/events/character-sync';
 export * from './domains/configuration/events/configuration-updated';
 export * from './domains/configuration/service';
+export * from './domains/discord/service';
 export * from './domains/localization/events/locales-updated';
 export * from './domains/localization/events/localization-updated';
 export * from './domains/localization/service';

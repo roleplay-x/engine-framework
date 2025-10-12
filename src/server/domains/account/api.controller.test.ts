@@ -81,6 +81,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -116,6 +117,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -201,6 +203,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: 'different_hash', // Wrong hash
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithDifferentHash);
@@ -245,6 +248,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -280,6 +284,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -345,6 +350,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -380,6 +386,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -444,6 +451,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -479,6 +487,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -541,6 +550,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -574,6 +584,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -630,6 +641,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -668,6 +680,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -721,6 +734,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -754,6 +768,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
@@ -810,6 +825,7 @@ describe('AccountController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -848,6 +864,7 @@ describe('AccountController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);

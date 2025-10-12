@@ -58,6 +58,7 @@ describe('SessionController Integration', () => {
         id: testSessionId,
         tokenHash: expectedTokenHash,
         hash: 'session_hash',
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
@@ -93,6 +94,7 @@ describe('SessionController Integration', () => {
           segmentDefinitionIds: [],
           authorizedDate: Date.now(),
         },
+        token: 'session_token_123',
       };
 
       mockSessionService.getSession.mockReturnValue(sessionWithAccount);
