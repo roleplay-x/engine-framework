@@ -61,7 +61,11 @@ export class ReferenceService extends RPServerService {
     CategoryReferenceId,
     Set<SegmentDefinitionId>
   > = new Map([]);
-
+  /** Cache of reference IDs indexed by segment definition id */
+  private readonly segmentDefinitionReferenceIds: Map<
+    SegmentDefinitionId,
+    Set<CategoryReferenceId>
+  > = new Map([]);
   /** Map of segment definitions indexed by their unique ID */
   private readonly segmentDefinitions: Map<SegmentDefinitionId, RPSegmentDefinition> = new Map([]);
   /** Map tracking which session is associated with each category reference */
@@ -271,7 +275,11 @@ export class ReferenceService extends RPServerService {
   private async loadReferenceSegments(categoryReferenceId: CategoryReferenceIdParam) {
     const catRefId = getCategoryReferenceId(categoryReferenceId);
     const segments = await this.getEngineApi(ReferenceApi).getReferenceSegments(catRefId);
-    const set = new Set([...segments.map((p) => p.segmentDefinitionId)]);
+    const set = new Set<SegmentDefinitionId>([]);
+    segments.forEach((segment) => {
+      set.add(segment.segmentDefinitionId);
+      this.segmentDefinitionReferenceIds.get(segment.segmentDefinitionId)?.add(catRefId);
+    });
     this.referenceSegmentDefinitionIds.set(catRefId, set);
   }
 
@@ -295,15 +303,19 @@ export class ReferenceService extends RPServerService {
 
   private async preloadSegmentDefinitions() {
     const segmentDefinitions = await this.getEngineApi(SegmentApi).getSegmentDefinitions();
-    segmentDefinitions.forEach((segmentDefinition) =>
-      this.segmentDefinitions.set(segmentDefinition.id, segmentDefinition),
-    );
+    segmentDefinitions.forEach((segmentDefinition) => {
+      this.segmentDefinitions.set(segmentDefinition.id, segmentDefinition);
+      this.segmentDefinitionReferenceIds.set(
+        segmentDefinition.id,
+        new Set<CategoryReferenceId>([]),
+      );
+    });
   }
 
   private async preloadReferenceCategory(category: ReferenceCategory) {
     await this.preloadReferences(category);
     await this.preloadReferenceMetrics(category);
-    await this.preloadReferenceSegmentDefinitions(category);
+    await this.preloadReferenceSegments(category);
   }
 
   private async preloadReferences(category: ReferenceCategory) {
@@ -352,7 +364,7 @@ export class ReferenceService extends RPServerService {
     }
   }
 
-  private async preloadReferenceSegmentDefinitions(category: ReferenceCategory) {
+  private async preloadReferenceSegments(category: ReferenceCategory) {
     let pageIndex = 0;
     while (true) {
       const segments = await this.getEngineApi(SegmentApi).getSegments({
@@ -374,6 +386,7 @@ export class ReferenceService extends RPServerService {
         }
 
         refSegmentDefinitionIds.add(segment.segmentDefinitionId);
+        this.segmentDefinitionReferenceIds.get(segment.segmentDefinitionId)?.add(catRefId);
       });
 
       if (segments.pageCount <= pageIndex) {
@@ -392,6 +405,9 @@ export class ReferenceService extends RPServerService {
 
     this.references.delete(catRefId);
     this.metrics.delete(catRefId);
+    this.referenceSegmentDefinitionIds.get(catRefId)?.forEach((segmentDefinitionId) => {
+      this.segmentDefinitionReferenceIds.get(segmentDefinitionId)?.delete(catRefId);
+    });
     this.referenceSegmentDefinitionIds.delete(catRefId);
   }
 
@@ -476,6 +492,10 @@ export class ReferenceService extends RPServerService {
       createdDate: payload.timestamp,
       lastModifiedDate: payload.timestamp,
     });
+
+    if (!this.segmentDefinitionReferenceIds.get(payload.id)) {
+      this.segmentDefinitionReferenceIds.set(payload.id, new Set<CategoryReferenceId>([]));
+    }
   }
 
   @OnServer('socketSegmentDefinitionUpdated')
@@ -504,6 +524,7 @@ export class ReferenceService extends RPServerService {
   @OnServer('socketSegmentDefinitionRemoved')
   private async onSocketSegmentDefinitionRemoved(payload: SocketSegmentDefinitionRemoved) {
     this.segmentDefinitions.delete(payload.id);
+    this.segmentDefinitionReferenceIds.delete(payload.id);
   }
 
   @OnServer('socketSegmentCreated')
@@ -517,6 +538,10 @@ export class ReferenceService extends RPServerService {
     }
 
     segmentDefinitionIds.add(payload.segmentDefinitionId);
+    this.segmentDefinitionReferenceIds
+      .get(payload.segmentDefinitionId)
+      ?.add(payload.categoryReferenceId);
+
     this.eventEmitter.emit('segmentCreated', payload);
   }
 
@@ -531,6 +556,10 @@ export class ReferenceService extends RPServerService {
     }
 
     segmentDefinitionIds.delete(payload.segmentDefinitionId);
+    this.segmentDefinitionReferenceIds
+      .get(payload.segmentDefinitionId)
+      ?.delete(payload.categoryReferenceId);
+
     this.eventEmitter.emit('segmentRemoved', payload);
   }
 }
