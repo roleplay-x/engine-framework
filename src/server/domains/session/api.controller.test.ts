@@ -1,4 +1,4 @@
-import { AuthorizeSessionRequest } from '@roleplayx/engine-sdk';
+import { AuthorizeSessionRequest, LinkCharacterToSessionRequest } from '@roleplayx/engine-sdk';
 import { SessionInfo } from '@roleplayx/engine-sdk/session/models/session-info';
 
 import { ApiTestServer } from '../../../../test/api-test-utils';
@@ -17,6 +17,7 @@ describe('SessionController Integration', () => {
     mockSessionService = {
       getSession: jest.fn(),
       authorizeSession: jest.fn(),
+      linkCharacterToSession: jest.fn(),
     } as unknown as jest.Mocked<SessionService>;
 
     testServer = new ApiTestServer({
@@ -170,6 +171,203 @@ describe('SessionController Integration', () => {
       expect(response.statusCode).toBe(404);
       expect(mockSessionService.getSession).toHaveBeenCalledWith(testSessionId);
       expect(mockSessionService.authorizeSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('PUT /sessions/character', () => {
+    const linkCharacterRequest: LinkCharacterToSessionRequest = {
+      characterId: 'char_test123',
+    };
+
+    const sessionInfoWithCharacter: SessionInfo = {
+      id: testSessionId,
+      tokenHash: 'token_hash_123',
+      account: {
+        id: 'acc_test123',
+        username: 'testuser',
+        segmentDefinitionIds: [],
+        authorizedDate: Date.now(),
+      },
+      character: {
+        id: 'char_test123',
+        firstName: 'Test',
+        lastName: 'Character',
+        fullName: 'Test Character',
+        linkedDate: Date.now(),
+        segmentDefinitionIds: [],
+      },
+      ipAddress: '127.0.0.1',
+    };
+
+    const sessionToken = Buffer.from(`${testSessionId}:session_token_123`).toString('base64');
+    const authHeader = `Basic ${sessionToken}`;
+
+    it('should link character to session successfully when session has account but no character', async () => {
+      const expectedTokenHash = generateSessionTokenHash(testSessionId, 'session_token_123');
+
+      const sessionWithAccountNoCharacter: RPSession = {
+        id: testSessionId,
+        tokenHash: expectedTokenHash,
+        hash: 'session_hash',
+        account: {
+          id: 'acc_test123',
+          username: 'testuser',
+          segmentDefinitionIds: [],
+          authorizedDate: Date.now(),
+        },
+        token: 'session_token_123',
+      };
+
+      mockSessionService.getSession.mockReturnValue(sessionWithAccountNoCharacter);
+      mockSessionService.linkCharacterToSession.mockResolvedValue(sessionInfoWithCharacter);
+
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          authorization: authHeader,
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.payload)).toEqual(sessionInfoWithCharacter);
+      expect(mockSessionService.getSession).toHaveBeenCalledWith(testSessionId);
+      expect(mockSessionService.linkCharacterToSession).toHaveBeenCalledWith(
+        testSessionId,
+        linkCharacterRequest,
+      );
+    });
+
+    it('should return 403 forbidden when session is not authorized', async () => {
+      const expectedTokenHash = generateSessionTokenHash(testSessionId, 'session_token_123');
+
+      const sessionWithoutAccount: RPSession = {
+        id: testSessionId,
+        tokenHash: expectedTokenHash,
+        hash: 'session_hash',
+        token: 'session_token_123',
+      };
+
+      mockSessionService.getSession.mockReturnValue(sessionWithoutAccount);
+
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          authorization: authHeader,
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(403);
+      const responseBody = JSON.parse(response.payload);
+      expect(responseBody.key).toBe('SESSION_HAS_NOT_AUTHORIZED');
+      expect(mockSessionService.getSession).toHaveBeenCalledWith(testSessionId);
+      expect(mockSessionService.linkCharacterToSession).not.toHaveBeenCalled();
+    });
+
+    it('should return 409 conflict when session is already linked to a character', async () => {
+      const expectedTokenHash = generateSessionTokenHash(testSessionId, 'session_token_123');
+
+      const sessionWithCharacter: RPSession = {
+        id: testSessionId,
+        tokenHash: expectedTokenHash,
+        hash: 'session_hash',
+        account: {
+          id: 'acc_test123',
+          username: 'testuser',
+          segmentDefinitionIds: [],
+          authorizedDate: Date.now(),
+        },
+        character: {
+          id: 'char_test123',
+          firstName: 'Test',
+          lastName: 'Character',
+          fullName: 'Test Character',
+          linkedDate: Date.now(),
+          segmentDefinitionIds: [],
+        },
+        token: 'session_token_123',
+      };
+
+      mockSessionService.getSession.mockReturnValue(sessionWithCharacter);
+
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          authorization: authHeader,
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(409);
+      const responseBody = JSON.parse(response.payload);
+      expect(responseBody.key).toBe('SESSION_IS_ALREADY_LINKED_TO_CHARACTER');
+      expect(responseBody.params).toEqual({});
+      expect(mockSessionService.getSession).toHaveBeenCalledWith(testSessionId);
+      expect(mockSessionService.linkCharacterToSession).not.toHaveBeenCalled();
+    });
+
+    it('should return 401 when no authorization header is provided', async () => {
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(401);
+      const responseBody = JSON.parse(response.payload);
+      expect(responseBody.key).toBe('SESSION_TOKEN_MISSING');
+    });
+
+    it('should return 401 when invalid session token is provided', async () => {
+      const invalidAuthHeader = 'Basic invalid_token';
+
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          authorization: invalidAuthHeader,
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(401);
+      const responseBody = JSON.parse(response.payload);
+      expect(responseBody.key).toBe('INVALID_SESSION_TOKEN_FORMAT');
+    });
+
+    it('should return 404 when session is not found', async () => {
+      mockSessionService.getSession.mockReturnValue(undefined);
+
+      const fastify = testServer.getFastify();
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/sessions/character',
+        headers: {
+          authorization: authHeader,
+          'content-type': 'application/json',
+        },
+        payload: linkCharacterRequest,
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(mockSessionService.getSession).toHaveBeenCalledWith(testSessionId);
+      expect(mockSessionService.linkCharacterToSession).not.toHaveBeenCalled();
     });
   });
 });

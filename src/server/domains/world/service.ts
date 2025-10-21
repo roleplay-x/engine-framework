@@ -1,9 +1,9 @@
 import {
   CameraApi,
+  ConfigKey,
   CreateCameraRequest,
   CreateSoundRequest,
   SoundApi,
-  ConfigKey,
 } from '@roleplayx/engine-sdk';
 
 import { RPServerService } from '../../core/server-service';
@@ -16,12 +16,12 @@ import { SocketSoundCreated } from '../../socket/events/socket-sound-created';
 import { SocketSoundUpdated } from '../../socket/events/socket-sound-updated';
 import { SocketSoundEnabled } from '../../socket/events/socket-sound-enabled';
 import { SocketSoundDisabled } from '../../socket/events/socket-sound-disabled';
-
-import { RPSound, SoundId } from './models/sound';
-import { CameraId, RPCamera } from './models/camera';
 import { ConfigurationService } from '../configuration/service';
 import { PlayerId } from '../session/models/session';
 import { PlatformAdapter } from '../../natives/adapters/platform.adapter';
+
+import { CameraId, RPCamera } from './models/camera';
+import { RPSound, SoundId } from './models/sound';
 
 /**
  * Service for managing world elements like cameras and sounds in the roleplay server.
@@ -62,6 +62,7 @@ export class WorldService extends RPServerService {
   private cameras: Map<CameraId, RPCamera> = new Map([]);
   /** Cache of active sounds indexed by sound ID */
   private sounds: Map<SoundId, RPSound> = new Map([]);
+
   /** Platform adapter for network communication */
   private get platformAdapter(): PlatformAdapter {
     return this.context.platformAdapter;

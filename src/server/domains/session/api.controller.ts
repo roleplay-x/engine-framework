@@ -1,4 +1,4 @@
-import { AuthorizeSessionRequest } from '@roleplayx/engine-sdk';
+import { AuthorizeSessionRequest, LinkCharacterToSessionRequest } from '@roleplayx/engine-sdk';
 import { SessionInfo } from '@roleplayx/engine-sdk/session/models/session-info';
 
 import {
@@ -51,5 +51,34 @@ export class SessionController extends ApiController {
     }
 
     return this.sessionService.authorizeSession(sessionId, request);
+  }
+
+  /**
+   * Link character to session
+   *
+   * Links a character to an authorized session. The session must already be authorized (linked to an account)
+   * but must not be linked to a character yet.
+   *
+   * @param request - The link character request containing character information
+   * @param authRequest - The authorized request containing session info
+   * @returns Session information with account and character details
+   * @throws ConflictError when session is already linked to a character
+   */
+  @Put('/character', {
+    statusCode: 200,
+  })
+  @SessionToken(EndpointScope.ACCOUNT)
+  public async linkCharacterToSession(
+    @Body() request: LinkCharacterToSessionRequest,
+    @Request() authRequest: AuthorizedRequest,
+  ): Promise<SessionInfo> {
+    const sessionId = authRequest.sessionId!;
+    const session = this.sessionService.getSession(sessionId);
+
+    if (session?.character) {
+      throw new ConflictError('SESSION_IS_ALREADY_LINKED_TO_CHARACTER', {});
+    }
+
+    return this.sessionService.linkCharacterToSession(sessionId, request);
   }
 }
