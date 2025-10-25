@@ -3,6 +3,7 @@
  */
 
 import { CameraType } from '@roleplayx/engine-sdk';
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
 
 import { PlayerId } from '../server/domains/session/models/session';
 
@@ -68,7 +69,7 @@ export interface RPClientToServerEvents {
   webviewScreenReady: { screen: string };
   webviewScreenInitialized: { screen: string };
   webviewScreenAction: {
-    screen: string;
+    screen: ScreenType;
     action: string;
     payload: any;
   };

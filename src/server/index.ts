@@ -32,6 +32,8 @@ export * from './domains/account/models/request/implicit-discord-auth.api-reques
 export * from './domains/account/models/request/implicit-discord-auth.request';
 export * from './domains/account/service';
 export * from './domains/character/events/character-sync';
+export * from './domains/character/models/character';
+export * from './domains/character/service';
 export * from './domains/configuration/events/configuration-updated';
 export * from './domains/configuration/service';
 export * from './domains/discord/service';

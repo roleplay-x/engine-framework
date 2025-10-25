@@ -1,5 +1,4 @@
-import { Vector3 } from '../../../shared';
-import { BasePlayer } from '../../../shared';
+import { BasePlayer, Vector3 } from '../../../shared';
 import { RPServerToClientEvents } from '../../../shared/types';
 import { RPServer } from '../../server';
 import { PlatformAdapter } from '../adapters';
@@ -27,12 +26,7 @@ export class ServerPlayer extends BasePlayer {
    * @param token - Player token
    * @returns New ServerPlayer instance
    */
-  public static create(
-    id: string,
-    sessionId: string,
-    ip: string,
-    token: string,
-  ): ServerPlayer {
+  public static create(id: string, sessionId: string, ip: string, token: string): ServerPlayer {
     return new ServerPlayer(id, sessionId, ip, token);
   }
 

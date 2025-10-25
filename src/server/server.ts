@@ -19,6 +19,7 @@ import { WebViewService } from './domains/webview/service';
 import { ApiControllerCtor, ApiServer, ApiServerConfig } from './api';
 import { PlatformAdapter } from './natives/adapters';
 import { DiscordService } from './domains/discord/service';
+import { CharacterService } from './domains/character/service';
 
 /** Configuration options for creating a roleplay server instance */
 export interface RPServerOptions {
@@ -175,6 +176,7 @@ export class RPServer {
       .addService(SessionService)
       .addService(ReferenceService)
       .addService(AccountService)
+      .addService(CharacterService)
       .addService(WebViewService)
       .addService(DiscordService);
 

@@ -20,7 +20,6 @@ import { ReferenceService } from '../reference/service';
 import { WorldService } from '../world/service';
 import { ServerPlayer } from '../../natives/entitites';
 import { RPServerEvents } from '../../core/events/events';
-import { WebViewService } from '../webview/service';
 import { ConfigurationService } from '../configuration/service';
 
 import {
@@ -295,10 +294,12 @@ export class SessionService extends RPServerService {
       return;
     }
 
+    const player = this.sessionToPlayer.get(payload.id);
     this.removePlayerBySession(payload.id);
 
     this.eventEmitter.emit('sessionFinished', {
       sessionId: payload.id,
+      playerId: player?.id,
       accountId: payload.accountId,
       characterId: payload.characterId,
       endReason: payload.endReason,
@@ -454,7 +455,7 @@ export class SessionService extends RPServerService {
     }
     return undefined;
   }
-  
+
   /**
    * Retrieves the session ID associated with a player.
    *
@@ -500,7 +501,7 @@ export class SessionService extends RPServerService {
    * sessionService.removePlayerBySession('sess_12345');
    * ```
    */
-  public removePlayerBySession(sessionId: SessionId): void {
+  private removePlayerBySession(sessionId: SessionId): void {
     this.sessionToPlayer.delete(sessionId);
   }
 

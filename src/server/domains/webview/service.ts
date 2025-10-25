@@ -1,10 +1,11 @@
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
+
 import { RPServerService } from '../../core/server-service';
-import { OnClient, OnHook, OnServer } from '../../core/events/decorators';
+import { OnClient, OnServer } from '../../core/events/decorators';
 import { SessionService } from '../session/service';
-import { PlayerId, RPSession, SessionId } from '../session/models/session';
+import { PlayerId, RPSession } from '../session/models/session';
 import { RPClientToServerEvents } from '../../../shared/types';
 import { RPServer } from '../../server';
-import { ServerPlayer } from '../../natives/entitites';
 
 export class WebViewService extends RPServerService {
   public async init(): Promise<void> {
@@ -13,10 +14,7 @@ export class WebViewService extends RPServerService {
   }
 
   @OnServer('sessionStarted')
-  private async onSessionStarted(data: {
-    sessionId: string;
-    sessionToken: string;
-  }): Promise<void> {
+  private async onSessionStarted(data: { sessionId: string; sessionToken: string }): Promise<void> {
     this.logger.info('Session started, configuring shell and showing LOGIN screen:', data);
 
     const player = this.getService(SessionService).getPlayerBySession(data.sessionId);
@@ -36,21 +34,20 @@ export class WebViewService extends RPServerService {
       shellUrl,
     });
 
-    this.logger.info(`Shell configured for player ${player.id} with URL: ${shellUrl}`);
+    this.logger.trace(`Shell configured for player ${player.id} with URL: ${shellUrl}`);
 
-    this.showScreen(player.id, 'LOGIN', {
-      sessionId: data.sessionId,
-      sessionToken: data.sessionToken,
-    });
-
-    this.logger.info(`LOGIN screen shown for player ${player.id}`);
+    this.showScreen(player.id, ScreenType.Auth);
+    this.logger.trace(`AUTH screen shown for player ${player.id}`);
   }
 
   private buildShellUrl(session: RPSession): string {
     const shellUrl = RPServer.get().getShellUrl();
     const apiUrl = RPServer.get().getContext().getEngineClient().getApiUrl();
     const serverId = RPServer.get().getContext().getEngineClient().getServerId();
-    return shellUrl+`?engineApiUrl=${apiUrl}&serverId=${serverId}&sessionId=${session.id}&sessionToken=${session.token}&gamemodeApiUrl=http://localhost:3000`;
+    return (
+      shellUrl +
+      `?engineApiUrl=${apiUrl}&serverId=${serverId}&sessionId=${session.id}&sessionToken=${session.token}&gamemodeApiUrl=http://localhost:3000`
+    );
   }
 
   @OnClient('webviewShellReady')
@@ -59,7 +56,10 @@ export class WebViewService extends RPServerService {
   }
 
   @OnClient('webviewScreenReady')
-  private onScreenReady(playerId: PlayerId, data: RPClientToServerEvents['webviewScreenReady']): void {
+  private onScreenReady(
+    playerId: PlayerId,
+    data: RPClientToServerEvents['webviewScreenReady'],
+  ): void {
     this.logger.info(`Screen ready for player ${playerId}:`, data.screen);
   }
 
@@ -83,7 +83,10 @@ export class WebViewService extends RPServerService {
   }
 
   @OnClient('webviewScreenError')
-  private onScreenError(playerId: PlayerId, data: RPClientToServerEvents['webviewScreenError']): void {
+  private onScreenError(
+    playerId: PlayerId,
+    data: RPClientToServerEvents['webviewScreenError'],
+  ): void {
     this.logger.error(`Screen error from player ${playerId} [${data.screen}]:`, data.error);
   }
 
@@ -95,37 +98,35 @@ export class WebViewService extends RPServerService {
     this.logger.info(`Screen closed by player ${playerId}:`, data.screen);
   }
 
-  private handleScreenAction(playerId: PlayerId, screen: string, action: string, payload: any): void {
+  private handleScreenAction(
+    playerId: PlayerId,
+    screen: ScreenType,
+    action: string,
+    payload: any,
+  ): void {
     switch (screen) {
-      case 'LOGIN':
-        this.handleLoginAction(playerId, action, payload);
+      case ScreenType.Auth:
+        this.handleAuthAction(playerId, action, payload);
         break;
-      case 'CHARACTER_CREATOR':
-        this.handleCharacterCreatorAction(playerId, action, payload);
-        break;
-      case 'CHARACTER_SELECT':
-        this.handleCharacterSelectAction(playerId, action, payload);
+      case ScreenType.CharacterSelection:
+        this.handleCharacterSelectionAction(playerId, action, payload);
         break;
       default:
         this.logger.warn(`Unhandled screen action: ${screen} -> ${action}`);
     }
   }
 
-  private handleLoginAction(playerId: PlayerId, action: string, payload: any): void {
-    this.logger.info(`Login action [${action}]:`, payload);
+  private handleAuthAction(playerId: PlayerId, action: string, payload: any): void {
+    this.logger.info(`Auth action [${action}]:`, payload);
   }
 
-  private handleCharacterCreatorAction(playerId: PlayerId, action: string, payload: any): void {
-    this.logger.info(`Character creator action [${action}]:`, payload);
-  }
-
-  private handleCharacterSelectAction(playerId: PlayerId, action: string, payload: any): void {
-    this.logger.info(`Character select action [${action}]:`, payload);
+  private handleCharacterSelectionAction(playerId: PlayerId, action: string, payload: any): void {
+    this.logger.info(`Character selection action [${action}]:`, payload);
   }
 
   public showScreen(
     playerId: PlayerId,
-    screen: string,
+    screen: ScreenType,
     data?: Record<string, any>,
     transition?: 'fade' | 'slide' | 'none',
   ): void {
