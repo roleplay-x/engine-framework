@@ -35,7 +35,11 @@ export interface IServiceContext<T extends ServerTypes = ServerTypes> {
 
   getEngineApi<Api>(ApiConstructor: new (client: EngineClient) => Api): Api;
 
-  getService<Service>(ServiceConstructor: ServiceConstructor<Service, unknown>): Service;
+  getService<Service>(
+    ServiceConstructor:
+      | (new (context: IServiceContext<T>) => Service)
+      | (abstract new (context: IServiceContext<T>) => Service),
+  ): Service;
 }
 
 /**

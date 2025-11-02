@@ -31,7 +31,10 @@ export * from './domains/account/models/request/discord-oauth-token.api-request'
 export * from './domains/account/models/request/implicit-discord-auth.api-request';
 export * from './domains/account/models/request/implicit-discord-auth.request';
 export * from './domains/account/service';
+export * from './domains/blueprint/service';
+export * from './domains/character/api.controller';
 export * from './domains/character/events/character-sync';
+export * from './domains/character/factory';
 export * from './domains/character/models/character';
 export * from './domains/character/service';
 export * from './domains/configuration/events/configuration-updated';

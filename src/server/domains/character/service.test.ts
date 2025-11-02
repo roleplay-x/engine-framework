@@ -1,7 +1,7 @@
 /**
  * Tests for CharacterService
  */
-import { CharacterApi, SessionEndReason } from '@roleplayx/engine-sdk';
+import { Character, CharacterApi, SessionEndReason } from '@roleplayx/engine-sdk';
 
 import { RPEventEmitter } from '../../../core/bus/event-emitter';
 import { RPHookBus } from '../../../core/bus/hook-bus';
@@ -10,9 +10,13 @@ import { RPServerContext } from '../../core/context';
 import { RPServerEvents } from '../../core/events/events';
 import { RPServerHooks } from '../../core/hooks/hooks';
 import { AccountId } from '../account/models/account';
+import { SessionService } from '../session/service';
+import { WebViewService } from '../webview/service';
+import { ReferenceService } from '../reference/service';
 
 import { CharacterService } from './service';
 import { CharacterId, RPCharacter } from './models/character';
+import { CharacterFactory } from './factory';
 
 describe('CharacterService', () => {
   let mockLogger: MockLogger;
@@ -21,6 +25,10 @@ describe('CharacterService', () => {
   let mockContext: RPServerContext;
   let characterService: CharacterService;
   let mockCharacterApi: jest.Mocked<CharacterApi>;
+  let mockCharacterFactory: jest.Mocked<CharacterFactory>;
+  let mockSessionService: jest.Mocked<SessionService>;
+  let mockWebViewService: jest.Mocked<WebViewService>;
+  let mockReferenceService: jest.Mocked<ReferenceService>;
 
   // Test data
   const testAccountId: AccountId = 'acc_test123';
@@ -37,6 +45,12 @@ describe('CharacterService', () => {
     isActive: true,
     createdDate: Date.now(),
     lastModifiedDate: Date.now(),
+    appearance: {
+      values: [],
+      isUpdateRequired: true,
+      version: 0,
+    },
+    spawned: true,
   };
 
   const testCharacter2: RPCharacter = {
@@ -51,6 +65,12 @@ describe('CharacterService', () => {
     isActive: true,
     createdDate: Date.now(),
     lastModifiedDate: Date.now(),
+    appearance: {
+      values: [],
+      isUpdateRequired: true,
+      version: 0,
+    },
+    spawned: true,
   };
 
   beforeEach(() => {
@@ -69,12 +89,43 @@ describe('CharacterService', () => {
       }),
     } as unknown as jest.Mocked<CharacterApi>;
 
+    mockCharacterFactory = {
+      create: jest.fn().mockImplementation(async ({ character }) => ({
+        ...character,
+        appearance: {
+          values: [],
+          isUpdateRequired: true,
+          version: 0,
+        },
+        spawned: false,
+      })),
+    } as unknown as jest.Mocked<CharacterFactory>;
+
+    mockSessionService = {
+      getPlayerBySession: jest.fn().mockReturnValue({ id: 'player_123' }),
+    } as unknown as jest.Mocked<SessionService>;
+
+    mockWebViewService = {
+      closeScreen: jest.fn(),
+      showScreen: jest.fn(),
+    } as unknown as jest.Mocked<WebViewService>;
+
+    mockReferenceService = {
+      fetchReferenceSegmentDefinitionIds: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ReferenceService>;
+
     mockContext = {
       logger: mockLogger,
       eventEmitter: mockEventEmitter,
       hookBus: mockHookBus,
       getEngineApi: jest.fn().mockReturnValue(mockCharacterApi),
-      getService: jest.fn(),
+      getService: jest.fn().mockImplementation((service) => {
+        if (service === CharacterFactory) return mockCharacterFactory;
+        if (service === SessionService) return mockSessionService;
+        if (service === WebViewService) return mockWebViewService;
+        if (service === ReferenceService) return mockReferenceService;
+        return undefined;
+      }),
     } as unknown as RPServerContext;
 
     characterService = new CharacterService(mockContext);
@@ -94,7 +145,7 @@ describe('CharacterService', () => {
     it('should fetch character from API if not in cache', async () => {
       const result = await characterService.getCharacter(testCharacterId);
 
-      expect(result).toEqual(testCharacter);
+      expect(result).toEqual({ ...testCharacter, spawned: false });
       expect(mockCharacterApi.getCharacterById).toHaveBeenCalledWith(testCharacterId, {
         includeAppearance: true,
         includeMotives: true,
@@ -124,7 +175,7 @@ describe('CharacterService', () => {
 
       const result = await characterService.getCharacter(testCharacterId);
 
-      expect(result).toEqual(testCharacter);
+      expect(result).toEqual({ ...testCharacter, spawned: false });
       expect(characterService['characters'].has(testCharacterId)).toBe(true);
       expect(characterService['accountToCharacterIds'].get(testAccountId)).toContain(
         testCharacterId,
@@ -134,7 +185,7 @@ describe('CharacterService', () => {
     it('should not cache character if account is not tracked', async () => {
       const result = await characterService.getCharacter(testCharacterId);
 
-      expect(result).toEqual(testCharacter);
+      expect(result).toEqual({ ...testCharacter, spawned: false });
       expect(characterService['characters'].has(testCharacterId)).toBe(false);
     });
 
@@ -168,14 +219,17 @@ describe('CharacterService', () => {
     it('should fetch characters from API if not in cache', async () => {
       const result = await characterService.getCharactersByAccountId(testAccountId);
 
-      expect(result).toEqual([testCharacter, testCharacter2]);
+      expect(result).toEqual([
+        { ...testCharacter, spawned: false },
+        { ...testCharacter2, spawned: false },
+      ]);
       expect(mockCharacterApi.getCharacters).toHaveBeenCalledWith({
         accountId: testAccountId,
         includeMotives: true,
         includeAppearance: true,
         onlyActive: true,
-        pageSize: 1,
-        pageIndex: 100,
+        pageSize: 20,
+        pageIndex: 1,
       });
     });
 
@@ -350,6 +404,137 @@ describe('CharacterService', () => {
         expect(characterService['characters'].has(testCharacter2.id)).toBe(true);
         expect(characterService['accountToCharacterIds'].has(testAccountId)).toBe(true);
       });
+    });
+  });
+
+  describe('updateCharacterAppearance', () => {
+    const updatedCharacter: Character = {
+      id: testCharacterId,
+      accountId: testAccountId,
+      firstName: 'John',
+      lastName: 'Doe',
+      fullName: 'John Doe',
+      birthDate: '1990-01-15',
+      gender: 'male',
+      genderName: 'Male',
+      isActive: true,
+      createdDate: Date.now(),
+      lastModifiedDate: Date.now(),
+      appearance: {
+        data: { hairColor: 'black', eyeColor: 'green' },
+        version: 2,
+        imageUrl: 'https://example.com/updated.png',
+      },
+    };
+
+    beforeEach(() => {
+      characterService['characters'].set(testCharacterId, testCharacter);
+      characterService['accountToCharacterIds'].set(testAccountId, [testCharacterId]);
+
+      mockCharacterApi.updateCharacterAppearance = jest
+        .fn()
+        .mockResolvedValue(updatedCharacter);
+      mockReferenceService.getReferenceSegments = jest.fn().mockReturnValue([
+        { id: 'seg_1' },
+        { id: 'seg_2' },
+      ]);
+    });
+
+    it('should update character appearance via API', async () => {
+      const appearanceData = { hairColor: 'black', eyeColor: 'green' };
+      const base64Image = 'data:image/png;base64,abc123';
+
+      await characterService.updateCharacterAppearance(
+        testCharacterId,
+        appearanceData,
+        base64Image,
+      );
+
+      expect(mockCharacterApi.updateCharacterAppearance).toHaveBeenCalledWith(testCharacterId, {
+        data: appearanceData,
+        base64Image,
+      });
+    });
+
+    it('should update character appearance without image', async () => {
+      const appearanceData = { hairColor: 'black', eyeColor: 'green' };
+
+      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+
+      expect(mockCharacterApi.updateCharacterAppearance).toHaveBeenCalledWith(testCharacterId, {
+        data: appearanceData,
+        base64Image: undefined,
+      });
+    });
+
+    it('should refresh character in cache after update', async () => {
+      const appearanceData = { hairColor: 'black', eyeColor: 'green' };
+
+      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+
+      expect(mockCharacterFactory.create).toHaveBeenCalledWith({
+        character: updatedCharacter,
+        existingCharacter: testCharacter,
+        accountSegmentDefinitionIds: ['seg_1', 'seg_2'],
+      });
+    });
+
+    it('should update character in cache with new appearance data', async () => {
+      const appearanceData = { hairColor: 'black', eyeColor: 'green' };
+
+      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+
+      const cachedCharacter = characterService['characters'].get(testCharacterId);
+      expect(cachedCharacter).toBeDefined();
+      expect(cachedCharacter?.id).toBe(testCharacterId);
+    });
+  });
+
+  describe('markCharacterAsSpawned', () => {
+    it('should mark character as spawned', () => {
+      characterService['characters'].set(testCharacterId, {
+        ...testCharacter,
+        spawned: false,
+      });
+
+      characterService.markCharacterAsSpawned(testCharacterId);
+
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
+    });
+
+    it('should do nothing if character is not in cache', () => {
+      characterService.markCharacterAsSpawned('char_nonexistent');
+
+      expect(characterService['characters'].has('char_nonexistent')).toBe(false);
+    });
+
+    it('should preserve all other character properties', () => {
+      const originalCharacter = {
+        ...testCharacter,
+        spawned: false,
+      };
+      characterService['characters'].set(testCharacterId, originalCharacter);
+
+      characterService.markCharacterAsSpawned(testCharacterId);
+
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character).toEqual({
+        ...originalCharacter,
+        spawned: true,
+      });
+    });
+
+    it('should handle already spawned character', () => {
+      characterService['characters'].set(testCharacterId, {
+        ...testCharacter,
+        spawned: true,
+      });
+
+      characterService.markCharacterAsSpawned(testCharacterId);
+
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
     });
   });
 

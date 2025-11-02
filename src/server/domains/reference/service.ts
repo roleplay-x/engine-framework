@@ -143,6 +143,40 @@ export class ReferenceService extends RPServerService {
   }
 
   /**
+   * Fetches all segment definition IDs associated with a specific category reference.
+   *
+   * Retrieves reference segments from the Engine API and extracts their segment
+   * definition IDs. This is useful for determining which segment definitions are
+   * associated with a particular reference (account, character, vehicle, etc.).
+   *
+   * @param categoryReferenceId - The category reference ID (object with category and referenceId, or string)
+   * @returns Promise resolving to array of segment definition IDs
+   * @throws {EngineError} When the API request fails
+   *
+   * @example
+   * ```typescript
+   * // Fetch segment definition IDs for an account
+   * const segmentIds = await referenceService.fetchReferenceSegmentDefinitionIds({
+   *   category: ReferenceCategory.Account,
+   *   referenceId: 'acc_123'
+   * });
+   * console.log(`Account has ${segmentIds.length} segment definitions`);
+   *
+   * // Using string format
+   * const segmentIds2 = await referenceService.fetchReferenceSegmentDefinitionIds(
+   *   'account:acc_123'
+   * );
+   * ```
+   */
+  public async fetchReferenceSegmentDefinitionIds(
+    categoryReferenceId: CategoryReferenceIdParam,
+  ): Promise<ReadonlyArray<SegmentDefinitionId>> {
+    const catRefId = getCategoryReferenceId(categoryReferenceId);
+    const segments = await this.getEngineApi(ReferenceApi).getReferenceSegments(catRefId);
+    return segments.map((p) => p.segmentDefinitionId);
+  }
+
+  /**
    * Retrieves all unique access policies for a specific category reference.
    *
    * Collects access policies from all segment definitions associated with the

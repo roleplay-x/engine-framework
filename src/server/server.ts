@@ -20,6 +20,8 @@ import { ApiControllerCtor, ApiServer, ApiServerConfig } from './api';
 import { PlatformAdapter } from './natives/adapters';
 import { DiscordService } from './domains/discord/service';
 import { CharacterService } from './domains/character/service';
+import { CharacterFactory } from './domains/character/factory';
+import { BlueprintService } from './domains/blueprint/service';
 
 /** Configuration options for creating a roleplay server instance */
 export interface RPServerOptions {
@@ -176,6 +178,8 @@ export class RPServer {
       .addService(SessionService)
       .addService(ReferenceService)
       .addService(AccountService)
+      .addService(BlueprintService)
+      .addService(CharacterFactory)
       .addService(CharacterService)
       .addService(WebViewService)
       .addService(DiscordService);
@@ -192,6 +196,10 @@ export class RPServer {
 
     import('./domains/account/api.controller').then(({ AccountController }) => {
       this.registerController(AccountController);
+    });
+
+    import('./domains/character/api.controller').then(({ CharacterController }) => {
+      this.registerController(CharacterController);
     });
   }
 

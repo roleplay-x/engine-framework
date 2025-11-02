@@ -6,7 +6,7 @@ import { SegmentStyle } from '@roleplayx/engine-sdk/segment/models/segment-style
 export type SegmentDefinitionId = string;
 
 export interface RPSegmentDefinition {
-  id: string;
+  id: SegmentDefinitionId;
   type: SegmentTypeCode;
   category: ReferenceCategory;
   policy: SegmentPolicy;

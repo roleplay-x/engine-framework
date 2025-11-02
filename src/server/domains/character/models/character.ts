@@ -1,7 +1,16 @@
-import { Character } from '@roleplayx/engine-sdk';
+import { BaseBlueprintConfigValue, Character } from '@roleplayx/engine-sdk';
 
 export type CharacterId = string;
 
-export interface RPCharacter extends Character {
+export interface RPCharacterAppearance {
+  values: BaseBlueprintConfigValue[];
+  imageUrl?: string;
+  version: number;
+  isUpdateRequired: boolean;
+}
+
+export interface RPCharacter extends Omit<Character, 'appearance'> {
   id: CharacterId;
+  appearance: RPCharacterAppearance;
+  spawned: boolean;
 }

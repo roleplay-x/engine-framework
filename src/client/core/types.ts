@@ -1,7 +1,7 @@
 import { RPHookBus } from '../../core/bus/hook-bus';
-import { RPLogger } from '../../core/logger';
-import { RPClientHooks } from './hooks/hooks';
 import { ClientPlatformAdapter } from '../natives/adapters';
+
+import { RPClientHooks } from './hooks/hooks';
 
 /** Base client types interface */
 export interface ClientTypes {

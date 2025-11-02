@@ -1,6 +1,6 @@
 {
   "name": "@roleplayx/engine-framework",
-  "version": "0.1.110",
+  "version": "0.1.111",
   "description": "RoleplayX Engine Framework",
   "main": "index.js",
   "types": "index.d.ts",
@@ -32,13 +32,14 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
-    "@roleplayx/engine-sdk": "^0.1.36",
+    "@roleplayx/engine-sdk": "^0.1.46",
     "@roleplayx/engine-ui-sdk": "^0.1.35",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "emittery": "^1.2.0",
     "fastify": "^5.4.0",
     "json-logic-js": "^2.0.5",
+    "lodash": "^4.17.21",
     "reflect-metadata": "^0.2.2",
     "uuid": "^11.1.0",
     "ws": "^8.18.3"
@@ -75,6 +76,7 @@
     "@eslint/js": "^9.31.0",
     "@types/jest": "^30.0.0",
     "@types/json-logic-js": "^2.0.8",
+    "@types/lodash": "^4.17.20",
     "@types/nock": "^11.1.0",
     "@types/node": "^24.0.13",
     "@types/uuid": "^10.0.0",

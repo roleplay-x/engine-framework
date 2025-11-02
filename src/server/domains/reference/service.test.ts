@@ -7,6 +7,7 @@ import {
   MetricMainKey,
   MetricValueType,
   Reference,
+  ReferenceApi,
   ReferenceCategory,
   Segment,
   SegmentTypeCode,
@@ -648,6 +649,203 @@ describe('ReferenceService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(testSegmentDefinitions[1]);
+    });
+  });
+
+  describe('fetchReferenceSegmentDefinitionIds', () => {
+    const testReferenceSegments: Segment[] = [
+      {
+        id: 'seg_1',
+        name: 'Segment 1',
+        type: SegmentTypeCode.Manual,
+        typeName: 'Manual',
+        category: ReferenceCategory.Account,
+        categoryName: 'Account',
+        referenceId: 'acc_123',
+        referenceName: 'Account 123',
+        segmentDefinitionId: 'segdef_1',
+        policy: { accessPolicies: [] },
+        style: { color: { background: '#000', text: '#FFF' } },
+        visible: true,
+        createdDate: Date.now(),
+        lastModifiedDate: Date.now(),
+      },
+      {
+        id: 'seg_2',
+        name: 'Segment 2',
+        type: SegmentTypeCode.Manual,
+        typeName: 'Manual',
+        category: ReferenceCategory.Account,
+        categoryName: 'Account',
+        referenceId: 'acc_123',
+        referenceName: 'Account 123',
+        segmentDefinitionId: 'segdef_2',
+        policy: { accessPolicies: [] },
+        style: { color: { background: '#000', text: '#FFF' } },
+        visible: true,
+        createdDate: Date.now(),
+        lastModifiedDate: Date.now(),
+      },
+      {
+        id: 'seg_3',
+        name: 'Segment 3',
+        type: SegmentTypeCode.Manual,
+        typeName: 'Manual',
+        category: ReferenceCategory.Account,
+        categoryName: 'Account',
+        referenceId: 'acc_123',
+        referenceName: 'Account 123',
+        segmentDefinitionId: 'segdef_3',
+        policy: { accessPolicies: [] },
+        style: { color: { background: '#000', text: '#FFF' } },
+        visible: true,
+        createdDate: Date.now(),
+        lastModifiedDate: Date.now(),
+      },
+    ];
+
+    it('should fetch and return segment definition IDs using object format', async () => {
+      mockReferenceApi.getReferenceSegments.mockResolvedValue(testReferenceSegments);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds({
+        category: ReferenceCategory.Account,
+        referenceId: 'acc_123',
+      });
+
+      expect(result).toEqual(['segdef_1', 'segdef_2', 'segdef_3']);
+      expect(mockReferenceApi.getReferenceSegments).toHaveBeenCalledWith('ACCOUNT:acc_123');
+    });
+
+    it('should fetch and return segment definition IDs using string format', async () => {
+      mockReferenceApi.getReferenceSegments.mockResolvedValue(testReferenceSegments);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds('ACCOUNT:acc_123');
+
+      expect(result).toEqual(['segdef_1', 'segdef_2', 'segdef_3']);
+      expect(mockReferenceApi.getReferenceSegments).toHaveBeenCalledWith('ACCOUNT:acc_123');
+    });
+
+    it('should return empty array when no segments exist', async () => {
+      mockReferenceApi.getReferenceSegments.mockResolvedValue([]);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds({
+        category: ReferenceCategory.Character,
+        referenceId: 'char_456',
+      });
+
+      expect(result).toEqual([]);
+      expect(mockReferenceApi.getReferenceSegments).toHaveBeenCalledWith('CHARACTER:char_456');
+    });
+
+    it('should work with different reference categories', async () => {
+      const vehicleSegments: Segment[] = [
+        {
+          id: 'seg_v1',
+          name: 'Vehicle Segment',
+          type: SegmentTypeCode.Manual,
+          typeName: 'Manual',
+          category: ReferenceCategory.Vehicle,
+          categoryName: 'Vehicle',
+          referenceId: 'veh_789',
+          referenceName: 'Vehicle 789',
+          segmentDefinitionId: 'segdef_v1',
+          policy: { accessPolicies: [] },
+          style: { color: { background: '#000', text: '#FFF' } },
+          visible: true,
+          createdDate: Date.now(),
+          lastModifiedDate: Date.now(),
+        },
+      ];
+
+      mockReferenceApi.getReferenceSegments.mockResolvedValue(vehicleSegments);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds({
+        category: ReferenceCategory.Vehicle,
+        referenceId: 'veh_789',
+      });
+
+      expect(result).toEqual(['segdef_v1']);
+      expect(mockReferenceApi.getReferenceSegments).toHaveBeenCalledWith('VEHICLE:veh_789');
+    });
+
+    it('should extract only segment definition IDs from segments', async () => {
+      mockReferenceApi.getReferenceSegments.mockResolvedValue(testReferenceSegments);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds('ACCOUNT:acc_123');
+
+      expect(result).toEqual(['segdef_1', 'segdef_2', 'segdef_3']);
+      expect(result).not.toContainEqual(expect.objectContaining({ id: 'seg_1' }));
+    });
+
+    it('should handle API errors', async () => {
+      const apiError = new Error('API Error');
+      mockReferenceApi.getReferenceSegments.mockRejectedValue(apiError);
+
+      await expect(
+        referenceService.fetchReferenceSegmentDefinitionIds({
+          category: ReferenceCategory.Account,
+          referenceId: 'acc_123',
+        }),
+      ).rejects.toThrow('API Error');
+    });
+
+    it('should maintain segment order from API response', async () => {
+      const orderedSegments: Segment[] = [
+        {
+          id: 'seg_3',
+          name: 'Segment 3',
+          type: SegmentTypeCode.Manual,
+          typeName: 'Manual',
+          category: ReferenceCategory.Account,
+          categoryName: 'Account',
+          referenceId: 'acc_123',
+          referenceName: 'Account 123',
+          segmentDefinitionId: 'segdef_3',
+          policy: { accessPolicies: [] },
+          style: { color: { background: '#000', text: '#FFF' } },
+          visible: true,
+          createdDate: Date.now(),
+          lastModifiedDate: Date.now(),
+        },
+        {
+          id: 'seg_1',
+          name: 'Segment 1',
+          type: SegmentTypeCode.Manual,
+          typeName: 'Manual',
+          category: ReferenceCategory.Account,
+          categoryName: 'Account',
+          referenceId: 'acc_123',
+          referenceName: 'Account 123',
+          segmentDefinitionId: 'segdef_1',
+          policy: { accessPolicies: [] },
+          style: { color: { background: '#000', text: '#FFF' } },
+          visible: true,
+          createdDate: Date.now(),
+          lastModifiedDate: Date.now(),
+        },
+        {
+          id: 'seg_2',
+          name: 'Segment 2',
+          type: SegmentTypeCode.Manual,
+          typeName: 'Manual',
+          category: ReferenceCategory.Account,
+          categoryName: 'Account',
+          referenceId: 'acc_123',
+          referenceName: 'Account 123',
+          segmentDefinitionId: 'segdef_2',
+          policy: { accessPolicies: [] },
+          style: { color: { background: '#000', text: '#FFF' } },
+          visible: true,
+          createdDate: Date.now(),
+          lastModifiedDate: Date.now(),
+        },
+      ];
+
+      mockReferenceApi.getReferenceSegments.mockResolvedValue(orderedSegments);
+
+      const result = await referenceService.fetchReferenceSegmentDefinitionIds('ACCOUNT:acc_123');
+
+      expect(result).toEqual(['segdef_3', 'segdef_1', 'segdef_2']);
     });
   });
 

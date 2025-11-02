@@ -25,6 +25,7 @@ describe('WorldService', () => {
   const testCameraId: CameraId = 'cam_test123';
   const testCamera: RPCamera = {
     id: testCameraId,
+    name: 'CamName',
     type: CameraType.Static,
     description: 'Test camera description',
     static: {
