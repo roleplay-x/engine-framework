@@ -259,14 +259,6 @@ export class SessionService extends RPServerService {
   @OnServer('sessionStarted')
   private async onSessionStarted({ sessionId }: RPServerEvents['sessionStarted']) {
     this.logger.info(`Session ${sessionId} started`);
-
-    const player = this.getPlayerBySession(sessionId);
-    if (!player) {
-      this.logger.error(`Player ${sessionId} not found in session`);
-      return;
-    }
-
-    this.getService(WorldService).setLoginCamera(player.id);
   }
 
   @OnServer('playerDisconnected')
@@ -338,12 +330,6 @@ export class SessionService extends RPServerService {
       accountId: session.account!.id,
       characterId: session.character!.id,
     });
-
-    const player = this.getPlayerBySession(session.id);
-    if (player) {
-      const worldService = this.getService(WorldService);
-      await worldService.setLoginCamera(player.id);
-    }
   }
 
   @OnServer('socketSessionUpdated')

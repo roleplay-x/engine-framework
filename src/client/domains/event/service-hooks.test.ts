@@ -60,7 +60,7 @@ describe('EventService Hooks', () => {
     it('should call hookBus.trigger for client events', () => {
       const eventHandler = jest.fn();
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith(
         'testEvent',
@@ -103,7 +103,7 @@ describe('EventService Hooks', () => {
         return data;
       });
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
@@ -130,7 +130,7 @@ describe('EventService Hooks', () => {
         return data;
       });
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
@@ -156,7 +156,7 @@ describe('EventService Hooks', () => {
         return data;
       });
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
@@ -174,7 +174,7 @@ describe('EventService Hooks', () => {
         return data;
       });
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
@@ -190,7 +190,7 @@ describe('EventService Hooks', () => {
 
       mockHookBus.run.mockRejectedValue(new Error('Hook error'));
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');
@@ -208,7 +208,7 @@ describe('EventService Hooks', () => {
       });
       const errorSpy = jest.spyOn(mockLogger, 'error');
 
-      eventService.on('testEvent', eventHandler);
+      (eventService.on as any)('testEvent', eventHandler);
 
       const wrappedHandler = (mockPlatformAdapter.network.on as jest.Mock).mock.calls[0][1];
       await wrappedHandler('testData');

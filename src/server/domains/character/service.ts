@@ -8,6 +8,11 @@ import { AccountId } from '../account/models/account';
 import { RPSessionAuthorized } from '../session/events/session-authorized';
 
 import { CharacterId, RPCharacter } from './models/character';
+import { WebViewService } from '../webview/service';
+import { SessionService } from '../session/service';
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
+import { PlayerId } from '../session/models/session';
+import { ServerPlayer } from '../../natives/entitites';
 
 /**
  * Service for managing player characters in the roleplay server.
@@ -155,7 +160,7 @@ export class CharacterService extends RPServerService {
    * @param payload - Session authorized event payload containing account info
    */
   @OnServer('sessionAuthorized')
-  private async onSessionAuthorized({ account }: RPSessionAuthorized) {
+  private async onSessionAuthorized({ account, sessionId }: RPSessionAuthorized) {
     const characters = await this.getCharactersByAccountId(account.id);
     for (const character of characters) {
       this.characters.set(character.id, character);
@@ -166,7 +171,18 @@ export class CharacterService extends RPServerService {
       characters.map((p) => p.id),
     );
 
-    // TODO: redirect player to the character selection screen
+    const player = this.getService(SessionService).getPlayerBySession(sessionId);
+    if (!player) {
+      this.logger.error(`Player not found for session: ${sessionId}`);
+      return;
+    }
+    
+    this.getService(WebViewService).closeScreen(player.id, ScreenType.Auth);
+    this.showCharacterSelection(player);
+  }
+
+  private async showCharacterSelection(player: ServerPlayer) {
+    this.getService(WebViewService).showScreen(player.id, ScreenType.CharacterSelection);
   }
 
   /**

@@ -6,6 +6,7 @@ import { SessionService } from '../session/service';
 import { PlayerId, RPSession } from '../session/models/session';
 import { RPClientToServerEvents } from '../../../shared/types';
 import { RPServer } from '../../server';
+import { WorldService } from '../world/service';
 
 export class WebViewService extends RPServerService {
   public async init(): Promise<void> {
@@ -124,17 +125,24 @@ export class WebViewService extends RPServerService {
     this.logger.info(`Character selection action [${action}]:`, payload);
   }
 
-  public showScreen(
+  public async showScreen(
     playerId: PlayerId,
     screen: ScreenType,
     data?: Record<string, any>,
     transition?: 'fade' | 'slide' | 'none',
-  ): void {
+  ): Promise<void> {
     const sessionService = this.getService(SessionService);
     const player = sessionService.getPlayerByPlayerId(playerId);
     if (!player) {
       this.logger.error(`Player not found: ${playerId}`);
       return;
+    }
+
+    const worldService = this.getService(WorldService);
+    const cameraSet = await worldService.setCameraForScreenType(player.id, screen);
+    
+    if (cameraSet) {
+      this.logger.trace(`Camera set for screen type ${screen} and player ${playerId}`);
     }
 
     player.emit('webviewShowScreen', {

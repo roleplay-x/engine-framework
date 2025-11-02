@@ -1,10 +1,13 @@
 import {
   CameraApi,
+  CameraType,
   ConfigKey,
+  ConfigSelectOptionValue,
   CreateCameraRequest,
   CreateSoundRequest,
   SoundApi,
 } from '@roleplayx/engine-sdk';
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
 
 import { RPServerService } from '../../core/server-service';
 import { OnServer } from '../../core/events/decorators';
@@ -62,6 +65,13 @@ export class WorldService extends RPServerService {
   private cameras: Map<CameraId, RPCamera> = new Map([]);
   /** Cache of active sounds indexed by sound ID */
   private sounds: Map<SoundId, RPSound> = new Map([]);
+
+  /** Default mapping of screen types to camera configuration keys */
+  private readonly defaultScreenTypeToCameraConfig: Record<string, ConfigKey> = {
+    [ScreenType.Auth]: ConfigKey.AuthScreenCamera,
+    [ScreenType.CharacterSelection]: ConfigKey.CharacterSelectionScreenCamera,
+    [ScreenType.CharacterAppearance]: ConfigKey.CharacterAppearanceScreenCamera,
+  };
 
   /** Platform adapter for network communication */
   private get platformAdapter(): PlatformAdapter {
@@ -278,10 +288,63 @@ export class WorldService extends RPServerService {
    * }
    * ```
    */
+  /**
+   * Sets a camera for a specific screen type.
+   *
+   * This method retrieves the camera configuration for the given screen type
+   * and activates it for the specified player. Each screen type can have its
+   * own camera configuration defined in the server settings.
+   *
+   * The camera selection process follows this order:
+   * 1. First checks if a custom camera is provided via the 'screenTypeCamera' hook
+   * 2. If no hook result, falls back to the default configuration mapping
+   * 3. If a configuration is found, retrieves the camera key from config
+   *
+   * @param playerId - The player ID to set the camera for
+   * @param screenType - The screen type to get camera configuration for
+   * @returns Promise resolving to true if camera was set successfully, false otherwise
+   *
+   * @example
+   * ```typescript
+   * // Basic usage
+   * const success = await worldService.setCameraForScreenType('player_123', ScreenType.Auth);
+   *
+   * // Custom camera via hook
+   * hookBus.register('screenTypeCamera', async ({ screenType, playerId }) => {
+   *   if (screenType === ScreenType.Auth && isVipPlayer(playerId)) {
+   *     return 'cam_vip_auth';
+   *   }
+   *   return null;
+   * });
+   * ```
+   */
+  public async setCameraForScreenType(playerId: PlayerId, screenType: string): Promise<boolean> {
+    try {
+      const configKey = this.defaultScreenTypeToCameraConfig[screenType];
+      
+      const cameraConfig = configKey ? this.getService(ConfigurationService).getConfig(configKey) : undefined;
+      const hookResult = await this.context.hookBus.run('screenTypeCamera', {
+        cameraId: (cameraConfig?.value as ConfigSelectOptionValue)?.key,
+        screenType,
+        playerId,
+      });
+
+      if (!hookResult || !hookResult.cameraId) {
+        this.logger.debug(`No camera configured for screen type ${screenType}`);
+        return false;
+      }
+
+      return this.setCameraForPlayer(playerId, hookResult.cameraId, screenType);
+    } catch (error) {
+      this.logger.error(`Failed to set camera for screen type ${screenType}:`, error);
+      return false;
+    }
+  }
+
   public async setLoginCamera(playerId: PlayerId): Promise<boolean> {
     try {
       const configService = this.getService(ConfigurationService);
-      const cameraConfig = configService.getConfig(ConfigKey.LoginScreenCamera);
+      const cameraConfig = configService.getConfig(ConfigKey.AuthScreenCamera);
 
       if (!cameraConfig || !cameraConfig.value) {
         this.logger.error('Login screen camera not configured');
@@ -304,15 +367,34 @@ export class WorldService extends RPServerService {
    *
    * @param playerId - The player ID to set the camera for
    * @param cameraKey - The camera key/ID to activate
+   * @param screenType - Optional screen type to associate with the camera
    * @returns Promise resolving to true if camera was set successfully, false otherwise
    */
-  public async setCameraForPlayer(playerId: PlayerId, cameraKey: string): Promise<boolean> {
+  public async setCameraForPlayer(playerId: PlayerId, cameraKey: string, screenType?: string): Promise<boolean> {
     try {
+      this.logger.info(cameraKey, "to set camera for player")
       const camera = this.getCamera(cameraKey);
 
       if (!camera) {
         this.logger.error(`Camera not found: ${cameraKey}`);
         return false;
+      }
+
+      if (camera.type === CameraType.PedEdit && camera.pedEdit) {
+        this.platformAdapter.network.emitToPlayer(playerId, 'cameraPedEditSet', {
+          id: camera.id,
+          type: camera.type,
+          position: camera.pedEdit.position,
+          rotation: camera.pedEdit.rotation,
+          fov: camera.pedEdit.fov,
+          freezePlayer: camera.freezePlayer,
+          hideHud: camera.hideHud,
+          enabled: camera.enabled,
+          screenType,
+        });
+
+        this.logger.info(`PedEdit camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`);
+        return true;
       }
 
       this.platformAdapter.network.emitToPlayer(playerId, 'cameraSet', {
@@ -324,9 +406,10 @@ export class WorldService extends RPServerService {
         freezePlayer: camera.freezePlayer,
         hideHud: camera.hideHud,
         enabled: camera.enabled,
+        screenType,
       });
 
-      this.logger.info(`Camera activated for player ${playerId}: ${camera.id}`);
+      this.logger.info(`Camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`);
       return true;
     } catch (error) {
       this.logger.error(`Failed to set camera for player ${playerId}:`, error);

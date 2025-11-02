@@ -5,3 +5,4 @@ export * from './spawn/service';
 export * from './camera/service';
 export * from './webview/service';
 export * from './ui/service';
+export * from './character/service';

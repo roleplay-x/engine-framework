@@ -63,7 +63,22 @@ export function OnServer<
   Events extends RPServerToClientEvents = RPServerToClientEvents,
   K extends keyof Events = keyof Events,
 >(event: K) {
-  return function (target: object, propertyKey: string, _descriptor: PropertyDescriptor) {
+  return function (target: any, propertyKeyOrContext: string | ClassMethodDecoratorContext, descriptor?: PropertyDescriptor) {
+    // Handle new decorator API (stage 3)
+    if (typeof propertyKeyOrContext === 'object' && 'kind' in propertyKeyOrContext) {
+      const context = propertyKeyOrContext as ClassMethodDecoratorContext;
+      const ctor = typeof target === 'function' ? target : target.constructor;
+      const propertyKey = String(context.name);
+      
+      const list: Array<{ method: string; event: string }> =
+        Reflect.getOwnMetadata(HANDLERS, ctor) || [];
+      list.push({ method: propertyKey, event: `server:${String(event)}` });
+      Reflect.defineMetadata(HANDLERS, list, ctor);
+      return;
+    }
+    
+    // Handle legacy decorator API
+    const propertyKey = propertyKeyOrContext as string;
     const ctor = target.constructor as unknown;
     const list: Array<{ method: string; event: string }> =
       Reflect.getOwnMetadata(HANDLERS, ctor as object) || [];

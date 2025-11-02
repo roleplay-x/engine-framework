@@ -12,6 +12,8 @@ import { SpawnService } from '../domains/spawn/service';
 import { CameraService } from '../domains/camera/service';
 import { WebViewService } from '../domains/webview/service';
 import { UIService } from '../domains/ui/service';
+import { CharacterService } from '../domains/character/service';
+import { CharacterSelectionScreen } from '../domains/webview/screens';
 
 /** Configuration options for creating a roleplay client instance */
 export interface RPClientOptions {
@@ -104,6 +106,8 @@ export class RPClient {
 
     this.context = RPClientContext.create(contextType, contextOptions);
 
+    // Core services
+    this.registerScreenServices();
     this.context.addService(EventService);
     this.context.addService(PlayerService);
     this.context.addService(HealthService);
@@ -111,6 +115,15 @@ export class RPClient {
     this.context.addService(CameraService);
     this.context.addService(WebViewService);
     this.context.addService(UIService);
+    this.context.addService(CharacterService);
+  }
+
+  /**
+   * Register all screen services
+   * Add new screen services here as they are created
+   */
+  private registerScreenServices(): void {
+    this.context.addService(CharacterSelectionScreen);
   }
 
   /**

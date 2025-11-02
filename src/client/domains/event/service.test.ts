@@ -154,7 +154,7 @@ describe('EventService', () => {
   describe('on', () => {
     it('should delegate to platform adapter network', () => {
       const handler = jest.fn();
-      eventService.on('testEvent', handler);
+      (eventService.on as any)('testEvent', handler);
 
       expect(mockPlatformAdapter.network.on).toHaveBeenCalledWith(
         'testEvent',
@@ -166,7 +166,7 @@ describe('EventService', () => {
   describe('off', () => {
     it('should delegate to platform adapter network', () => {
       const handler = jest.fn();
-      eventService.off('testEvent', handler);
+      (eventService.off as any)('testEvent', handler);
 
       expect(mockPlatformAdapter.network.off).toHaveBeenCalledWith('testEvent', handler);
     });
@@ -175,23 +175,23 @@ describe('EventService', () => {
   describe('once', () => {
     it('should delegate to platform adapter network', () => {
       const handler = jest.fn();
-      eventService.once('testEvent', handler);
+      (eventService.once as any)('testEvent', handler);
 
-      expect(mockPlatformAdapter.network.once).toHaveBeenCalledWith('testEvent', handler);
+      expect(mockPlatformAdapter.network.once).toHaveBeenCalledWith('testEvent', expect.any(Function));
     });
   });
 
   describe('emit', () => {
     it('should delegate to platform adapter network', () => {
-      eventService.emit('testEvent', 'arg1', 'arg2');
+      (eventService.emit as any)('testEvent', 'arg1');
 
-      expect(mockPlatformAdapter.network.emit).toHaveBeenCalledWith('testEvent', 'arg1', 'arg2');
+      expect(mockPlatformAdapter.network.emit).toHaveBeenCalledWith('testEvent', 'arg1');
     });
   });
 
   describe('removeAllListeners', () => {
     it('should delegate to platform adapter network', () => {
-      eventService.removeAllListeners('testEvent');
+      (eventService.removeAllListeners as any)('testEvent');
 
       expect(mockPlatformAdapter.network.removeAllListeners).toHaveBeenCalledWith('testEvent');
     });
@@ -207,7 +207,7 @@ describe('EventService', () => {
     it('should delegate to platform adapter network', () => {
       (mockPlatformAdapter.network.listenerCount as jest.Mock).mockReturnValue(5);
 
-      const count = eventService.listenerCount('testEvent');
+      const count = (eventService.listenerCount as any)('testEvent');
 
       expect(mockPlatformAdapter.network.listenerCount).toHaveBeenCalledWith('testEvent');
       expect(count).toBe(5);
@@ -230,7 +230,7 @@ describe('EventService', () => {
         handler,
       );
 
-      eventService.listenerCount('entityDamage');
+      (eventService.listenerCount as any)('entityDamage');
       expect(mockPlatformAdapter.network.listenerCount).toHaveBeenCalledWith('entityDamage');
     });
 

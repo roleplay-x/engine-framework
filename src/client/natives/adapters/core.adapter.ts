@@ -36,6 +36,16 @@ export interface ICoreAdapter {
   displayHud(display: boolean): void;
   displayRadar(display: boolean): void;
   isHudHidden(): boolean;
+  hideHudAndRadarThisFrame(): void;
+
+  // Controls
+  disableAllControlActions(padIndex: number): void;
+  disableControlAction(padIndex: number, control: number, disable: boolean): void;
+  isDisabledControlPressed(padIndex: number, control: number): boolean;
+  isControlJustPressed(padIndex: number, control: number): boolean;
+
+  // Cursor
+  showCursor(show: boolean): void;
 
   // Tick Management
   setTick(callback: () => void): number;

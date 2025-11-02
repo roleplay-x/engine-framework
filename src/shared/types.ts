@@ -9,6 +9,8 @@ import { PlayerId } from '../server/domains/session/models/session';
 
 export interface RPClientEvents {
   playerReady: void;
+  webviewScreenReady: { screen: string };
+  webviewScreenClosed: { screen: string };
 }
 
 export interface RPServerToClientEvents {
@@ -24,6 +26,7 @@ export interface RPServerToClientEvents {
   'spawn:failed': { error: string };
   'player:initialize': SpawnData;
   cameraSet: CameraData;
+  cameraPedEditSet: CameraPedEditData;
   cameraRelease: void;
   serverConfig: {
     serverName: string;
@@ -78,6 +81,10 @@ export interface RPClientToServerEvents {
     error: string;
   };
   webviewScreenClosed: { screen: string };
+  characterPreview: {
+    characterId?: string;
+    [key: string]: any;
+  };
 }
 
 export interface CameraData {
@@ -89,6 +96,19 @@ export interface CameraData {
   freezePlayer?: boolean;
   hideHud?: boolean;
   enabled?: boolean;
+  screenType?: string;
+}
+
+export interface CameraPedEditData {
+  id: string;
+  type: CameraType;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  fov: number;
+  freezePlayer?: boolean;
+  hideHud?: boolean;
+  enabled?: boolean;
+  screenType?: string;
 }
 
 export interface SpawnData {

@@ -88,16 +88,11 @@ export class SpawnService extends RPClientService<ClientTypes> {
         await this.platformAdapter.player.setPlayerModel(data.model);
       }
 
-      this.platformAdapter.player.setEntityPosition(
-        this.platformAdapter.player.getPlayerPed(),
-        data.position,
-        false,
-      );
-
-      this.platformAdapter.player.setEntityHeading(
-        this.platformAdapter.player.getPlayerPed(),
-        data.heading,
-      );
+      const playerPed = this.platformAdapter.player.getPlayerPed();
+      
+      this.platformAdapter.player.setEntityPosition(playerPed, data.position, false);
+      this.platformAdapter.player.setEntityHeading(playerPed, data.heading);
+      this.platformAdapter.player.setEntityVisible(playerPed, true);
 
       if (!data.skipFade) {
         await this.platformAdapter.core.fadeScreen(false, 1000);
@@ -118,6 +113,18 @@ export class SpawnService extends RPClientService<ClientTypes> {
         error: error instanceof Error ? error.message : 'Unknown spawn error',
       });
     }
+  }
+
+  /**
+   * Spawns player with new model at specified position (for character preview)
+   */
+  public async spawnForPreview(model: string, position: Vector3, heading: number): Promise<void> {
+    await this.executeSpawn({
+      position,
+      heading,
+      model,
+      skipFade: true,
+    });
   }
 
   /**

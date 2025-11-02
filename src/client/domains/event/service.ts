@@ -1,6 +1,6 @@
 import { RPClientService } from '../../core/client-service';
 import { GameEventName, GameEventArgs } from '../../natives/events/game-events';
-import { RPServerToClientEvents, RPClientToServerEvents } from '../../../shared/types';
+import { RPServerToClientEvents, RPClientToServerEvents, RPClientEvents } from '../../../shared/types';
 import { ClientTypes } from '../../core/types';
 import {
   ClientEventHookData,
@@ -104,58 +104,82 @@ export class EventService extends RPClientService<ClientTypes> {
   }
 
   /**
-   * Listens for local events.
+   * Listens for local events with type safety.
    *
    * @param event - Event name to listen for
-   * @param handler - Event handler function
+   * @param handler - Event handler function with typed data
    */
-  public on(event: string, handler: (...args: any[]) => void): void {
+  public on<K extends keyof RPClientEvents>(
+    event: K,
+    handler: (data: RPClientEvents[K]) => void
+  ): void {
     const wrappedHandler = async (...args: any[]) => {
-      const shouldContinue = await this.executeClientEventHooks(event, args, 'before');
+      const shouldContinue = await this.executeClientEventHooks(event as string, args, 'before');
       if (!shouldContinue) {
         return;
       }
 
       try {
-        handler(...args);
+        handler(args[0]);
       } catch (error) {
-        this.logger.error(`Error in event handler for '${event}':`, error);
+        this.logger.error(`Error in event handler for '${String(event)}':`, error);
       }
 
-      await this.executeClientEventHooks(event, args, 'after');
+      await this.executeClientEventHooks(event as string, args, 'after');
     };
 
-    this.platformAdapter.network.on(event, wrappedHandler);
+    this.platformAdapter.network.on(event as string, wrappedHandler);
   }
 
   /**
-   * Removes event listener.
+   * Removes event listener with type safety.
    *
    * @param event - Event name
    * @param handler - Event handler function to remove
    */
-  public off(event: string, handler: (...args: any[]) => void): void {
-    this.platformAdapter.network.off(event, handler);
+  public off<K extends keyof RPClientEvents>(
+    event: K,
+    handler: (data: RPClientEvents[K]) => void
+  ): void {
+    this.platformAdapter.network.off(event as string, handler);
   }
 
   /**
-   * Listens for event once.
+   * Listens for event once with type safety.
    *
    * @param event - Event name to listen for
    * @param handler - Event handler function
    */
-  public once(event: string, handler: (...args: any[]) => void): void {
-    this.platformAdapter.network.once(event, handler);
+  public once<K extends keyof RPClientEvents>(
+    event: K,
+    handler: (data: RPClientEvents[K]) => void
+  ): void {
+    const wrappedHandler = async (...args: any[]) => {
+      const shouldContinue = await this.executeClientEventHooks(event as string, args, 'before');
+      if (!shouldContinue) {
+        return;
+      }
+
+      try {
+        handler(args[0]);
+      } catch (error) {
+        this.logger.error(`Error in event handler for '${String(event)}':`, error);
+      }
+
+      await this.executeClientEventHooks(event as string, args, 'after');
+    };
+
+    this.platformAdapter.network.once(event as string, wrappedHandler);
   }
 
   /**
-   * Emits local events.
+   * Emits local events with type safety.
    *
    * @param event - Event name to emit
-   * @param args - Event arguments
+   * @param data - Event data
    */
-  public emit(event: string, ...args: any[]): void {
-    this.platformAdapter.network.emit(event, ...args);
+  public emit<K extends keyof RPClientEvents>(event: K, data: RPClientEvents[K]): void {
+    this.platformAdapter.network.emit(event as string, data);
   }
 
   /**

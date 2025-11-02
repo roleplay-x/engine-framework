@@ -2,7 +2,17 @@ import { Vector3 } from '../../../shared';
 
 export interface ICameraAdapter {
   createCamera(type?: string): number;
+  createCameraWithParams(
+    camName: string,
+    position: Vector3,
+    rotation: Vector3,
+    fov: number,
+    p8?: boolean,
+    p9?: number,
+  ): number;
   destroyCamera(camera: number, destroyImmediately?: boolean): void;
+  destroyAllCameras(render?: boolean): void;
+  shakeCamera(camera: number, shakeType: string, amplitude: number): void;
   setCameraActive(camera: number, active: boolean): void;
   renderScriptCameras(
     render: boolean,

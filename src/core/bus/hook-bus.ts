@@ -4,6 +4,8 @@ export type FilterObject<P> = Partial<{
   [K in keyof P]: P[K] | ((v: P[K], payload: P) => boolean);
 }> & { custom?: (payload: P) => boolean };
 
+type HookReturnType<T> = T extends (arg: any) => infer R ? Awaited<R> : never;
+
 function buildPredicate<P>(f: FilterObject<P>) {
   return (payload: P): boolean => {
     for (const k of Object.keys(f) as (keyof FilterObject<P>)[]) {
@@ -74,7 +76,7 @@ export class RPHookBus<HM extends object> {
   async run<K extends Extract<keyof HM, string>>(
     name: K,
     initial: HM[K] extends (arg: infer P) => unknown ? P : never,
-  ): Promise<unknown> {
+  ): Promise<HookReturnType<HM[K]>> {
     const m = this.wrappers.get(name);
     let payload: unknown = initial;
     if (m) {
@@ -82,6 +84,6 @@ export class RPHookBus<HM extends object> {
         payload = await wrapper(payload);
       }
     }
-    return payload;
+    return payload as HookReturnType<HM[K]>;
   }
 }
