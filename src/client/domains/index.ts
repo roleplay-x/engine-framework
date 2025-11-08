@@ -6,3 +6,4 @@ export * from './camera/service';
 export * from './webview/service';
 export * from './ui/service';
 export * from './character/service';
+export * from './character-appearance';

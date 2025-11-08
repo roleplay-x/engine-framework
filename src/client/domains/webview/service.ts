@@ -3,7 +3,7 @@ import { OnServer } from '../../core/events/decorators';
 import { RPServerToClientEvents } from '../../../shared/types';
 import { ClientTypes } from '../../core/types';
 import { EventService } from '../event/service';
-import { BaseScreen, CharacterSelectionScreen } from './screens';
+import { BaseScreen, CharacterSelectionScreen, CharacterAppearanceScreen } from './screens';
 
 enum ScreenLifecycle {
   CREATED = 'created',
@@ -69,6 +69,10 @@ export class WebViewService extends RPClientService<ClientTypes> {
     // Get character selection screen from context
     const characterSelectionScreen = this.context.getService(CharacterSelectionScreen);
     this.screenHandlers.set(characterSelectionScreen.getScreenName(), characterSelectionScreen);
+
+    // Get character appearance screen from context
+    const characterAppearanceScreen = this.context.getService(CharacterAppearanceScreen);
+    this.screenHandlers.set(characterAppearanceScreen.getScreenName(), characterAppearanceScreen);
 
     // Add more screen handlers here
     // const inventoryScreen = this.context.getService(InventoryScreen);

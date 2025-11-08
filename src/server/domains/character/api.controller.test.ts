@@ -92,6 +92,7 @@ describe('CharacterController Integration', () => {
       expect(response.statusCode).toBe(204);
       expect(mockCharacterService.updateCharacterAppearance).toHaveBeenCalledWith(
         testCharacterId,
+        testSessionId,
         appearanceRequest.data,
         appearanceRequest.base64Image,
       );
@@ -145,6 +146,7 @@ describe('CharacterController Integration', () => {
       expect(response.statusCode).toBe(204);
       expect(mockCharacterService.updateCharacterAppearance).toHaveBeenCalledWith(
         testCharacterId,
+        testSessionId,
         requestWithoutImage.data,
         undefined,
       );
@@ -308,6 +310,7 @@ describe('CharacterController Integration', () => {
       expect(response.statusCode).toBe(500);
       expect(mockCharacterService.updateCharacterAppearance).toHaveBeenCalledWith(
         testCharacterId,
+        testSessionId,
         appearanceRequest.data,
         appearanceRequest.base64Image,
       );

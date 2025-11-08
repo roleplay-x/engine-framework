@@ -14,6 +14,7 @@ import { AccountId } from '../account/models/account';
 import { RPSessionAuthorized } from '../session/events/session-authorized';
 import { WebViewService } from '../webview/service';
 import { SessionService } from '../session/service';
+import { SessionId } from '../session/models/session';
 import { ServerPlayer } from '../../natives/entitites';
 import { IServiceContext } from '../../core/types';
 import { ReferenceService } from '../reference/service';
@@ -186,7 +187,12 @@ export class CharacterService extends RPServerService {
    * Sends the appearance data to the Engine API, then refreshes the local cache
    * with the updated character data. The character must already exist in the cache.
    *
+   * After updating appearance:
+   * - If character has never spawned: redirect to spawn location selector
+   * - If character was already spawned: close appearance screen and update appearance in-game
+   *
    * @param characterId - The unique identifier of the character to update
+   * @param sessionId - The session ID of the player
    * @param data - Appearance data as key-value pairs (e.g., { hairColor: 'brown', eyeColor: 'blue' })
    * @param base64Image - Optional base64-encoded image of the character's appearance
    * @returns Promise that resolves when the update is complete
@@ -194,7 +200,7 @@ export class CharacterService extends RPServerService {
    *
    * @example
    * ```typescript
-   * await characterService.updateCharacterAppearance('char_123', {
+   * await characterService.updateCharacterAppearance('char_123', 'session_456', {
    *   hairColor: 'brown',
    *   eyeColor: 'blue',
    *   height: '180'
@@ -203,6 +209,7 @@ export class CharacterService extends RPServerService {
    */
   public async updateCharacterAppearance(
     characterId: CharacterId,
+    sessionId: SessionId,
     data?: Record<string, string>,
     base64Image?: string,
   ) {
@@ -214,11 +221,40 @@ export class CharacterService extends RPServerService {
       },
     );
 
-    await this.refreshCharacter(updatedCharacter);
+    const character = await this.refreshCharacter(updatedCharacter);
 
-    // TODO: if character.spawned === false, redirect to spawn screen
-    // else, just close appearance screen & hide loading (and update players appearance)
-    // NOTE: we need to call markCharacterAsSpawned() after/before/during the first spawn - or update it with an event
+    const sessionService = this.getService(SessionService);
+    const player = sessionService.getPlayerBySession(sessionId);
+    if (!player) {
+      this.logger.error(`Player not found for session: ${sessionId}`);
+      return;
+    }
+
+    const webViewService = this.getService(WebViewService);
+
+    // Check if character was already spawned
+    if (!character.spawned) {
+      this.logger.info(
+        `Character ${characterId} appearance updated, redirecting to spawn location selector`,
+      );
+
+      // Close appearance screen
+      webViewService.closeScreen(player.id, ScreenType.CharacterAppearance);
+
+      // TODO: Redirect to spawn location selector screen
+      // For now, just log
+      this.logger.info(`Character ${characterId} ready for spawn location selection`);
+    } else {
+      this.logger.info(
+        `Character ${characterId} appearance updated, closing appearance screen and updating in-game`,
+      );
+
+      // Close appearance screen
+      webViewService.closeScreen(player.id, ScreenType.CharacterAppearance);
+
+      // TODO: Trigger client-side appearance update
+      // player.emit('characterAppearanceUpdated', { values: character.appearance.values });
+    }
   }
 
   /**
@@ -314,9 +350,36 @@ export class CharacterService extends RPServerService {
       return;
     }
 
-    // TODO: check character appearance
-    // if character.appearance.isUpdateRequired == true: redirect it to the appearance editor
-    // else: redirect it to the spawn location selector
+    const sessionService = this.getService(SessionService);
+    const player = sessionService.getPlayerBySession(payload.sessionId);
+    if (!player) {
+      this.logger.error(`Player not found for session: ${payload.sessionId}`);
+      return;
+    }
+
+    const webViewService = this.getService(WebViewService);
+
+    // Check if character appearance needs to be updated
+    if (character.appearance.isUpdateRequired) {
+      this.logger.info(
+        `Character ${character.id} appearance requires update, redirecting to appearance screen`,
+      );
+
+      // Close character selection screen
+      webViewService.closeScreen(player.id, ScreenType.CharacterSelection);
+
+      // Show character appearance screen
+      await webViewService.showScreen(player.id, ScreenType.CharacterAppearance, {
+        characterId: character.id,
+        values: character.appearance.values,
+        isInitial: true,
+      });
+      return;
+    }
+
+    // TODO: Character appearance is complete, redirect to spawn location selector
+    // For now, we'll just log that the character is ready
+    this.logger.info(`Character ${character.id} appearance is complete, ready for spawn`);
   }
 
   /**

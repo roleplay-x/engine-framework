@@ -11,6 +11,7 @@ import { RPServerEvents } from '../../core/events/events';
 import { RPServerHooks } from '../../core/hooks/hooks';
 import { AccountId } from '../account/models/account';
 import { SessionService } from '../session/service';
+import { SessionId } from '../session/models/session';
 import { WebViewService } from '../webview/service';
 import { ReferenceService } from '../reference/service';
 
@@ -33,6 +34,7 @@ describe('CharacterService', () => {
   // Test data
   const testAccountId: AccountId = 'acc_test123';
   const testCharacterId: CharacterId = 'char_test123';
+  const testSessionId: SessionId = 'sess_test123';
   const testCharacter: RPCharacter = {
     id: testCharacterId,
     accountId: testAccountId,
@@ -446,6 +448,7 @@ describe('CharacterService', () => {
 
       await characterService.updateCharacterAppearance(
         testCharacterId,
+        testSessionId,
         appearanceData,
         base64Image,
       );
@@ -459,7 +462,11 @@ describe('CharacterService', () => {
     it('should update character appearance without image', async () => {
       const appearanceData = { hairColor: 'black', eyeColor: 'green' };
 
-      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+      await characterService.updateCharacterAppearance(
+        testCharacterId,
+        testSessionId,
+        appearanceData,
+      );
 
       expect(mockCharacterApi.updateCharacterAppearance).toHaveBeenCalledWith(testCharacterId, {
         data: appearanceData,
@@ -470,7 +477,11 @@ describe('CharacterService', () => {
     it('should refresh character in cache after update', async () => {
       const appearanceData = { hairColor: 'black', eyeColor: 'green' };
 
-      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+      await characterService.updateCharacterAppearance(
+        testCharacterId,
+        testSessionId,
+        appearanceData,
+      );
 
       expect(mockCharacterFactory.create).toHaveBeenCalledWith({
         character: updatedCharacter,
@@ -482,7 +493,11 @@ describe('CharacterService', () => {
     it('should update character in cache with new appearance data', async () => {
       const appearanceData = { hairColor: 'black', eyeColor: 'green' };
 
-      await characterService.updateCharacterAppearance(testCharacterId, appearanceData);
+      await characterService.updateCharacterAppearance(
+        testCharacterId,
+        testSessionId,
+        appearanceData,
+      );
 
       const cachedCharacter = characterService['characters'].get(testCharacterId);
       expect(cachedCharacter).toBeDefined();

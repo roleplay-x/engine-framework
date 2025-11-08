@@ -73,12 +73,13 @@ export class CharacterController extends ApiController {
     @Body() request: UpdateCharacterAppearanceRequest,
     @Request() authRequest: AuthorizedRequest,
   ): Promise<void> {
-    if (!authRequest.characterId) {
+    if (!authRequest.characterId || !authRequest.sessionId) {
       throw new ConflictError('SESSION_IS_NOT_LINKED_TO_A_CHARACTER', {});
     }
 
     await this.characterService.updateCharacterAppearance(
       authRequest.characterId,
+      authRequest.sessionId,
       request.data,
       request.base64Image,
     );

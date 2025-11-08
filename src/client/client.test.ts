@@ -13,7 +13,7 @@ import { CameraService } from './domains/camera/service';
 import { WebViewService } from './domains/webview/service';
 import { UIService } from './domains/ui/service';
 import { CharacterService } from './domains/character/service';
-import { CharacterSelectionScreen } from './domains/webview/screens';
+import { CharacterSelectionScreen, CharacterAppearanceScreen } from './domains/webview/screens';
 import { ClientPlatformAdapter } from './natives/adapters/platform.adapter';
 
 jest.mock('./core/context');
@@ -206,16 +206,17 @@ describe('RPClient', () => {
     it('should register all core services in correct order', () => {
       RPClient.create(testClientOptions, testNatives, mockPlatformAdapter);
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(9);
+      expect(mockContext.addService).toHaveBeenCalledTimes(10);
       expect(mockContext.addService).toHaveBeenNthCalledWith(1, CharacterSelectionScreen);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(2, EventService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(3, PlayerService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(4, HealthService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(5, SpawnService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(6, CameraService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(7, WebViewService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(8, UIService);
-      expect(mockContext.addService).toHaveBeenNthCalledWith(9, CharacterService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(2, CharacterAppearanceScreen);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(3, EventService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(4, PlayerService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(5, HealthService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(6, SpawnService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(7, CameraService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(8, WebViewService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(9, UIService);
+      expect(mockContext.addService).toHaveBeenNthCalledWith(10, CharacterService);
     });
 
     it('should replace previous instance when called multiple times', () => {
@@ -333,6 +334,7 @@ describe('RPClient', () => {
 
       const serviceOrder = [
         CharacterSelectionScreen,
+        CharacterAppearanceScreen,
         EventService,
         PlayerService,
         HealthService,
@@ -343,7 +345,7 @@ describe('RPClient', () => {
         CharacterService,
       ];
 
-      expect(mockContext.addService).toHaveBeenCalledTimes(9);
+      expect(mockContext.addService).toHaveBeenCalledTimes(10);
       serviceOrder.forEach((Service, index) => {
         expect(mockContext.addService).toHaveBeenNthCalledWith(index + 1, Service);
       });
