@@ -62,15 +62,7 @@ export interface RPServerEvents {
   socketLocaleAdded: SocketLocaleAdded;
   socketLocaleEnabled: SocketLocaleEnabled;
   socketLocaleDisabled: SocketLocaleDisabled;
-  // SOCKET - CAMERA
-  socketCameraCreated: SocketCameraCreated;
-  socketCameraUpdated: SocketCameraUpdated;
-  socketCameraEnabled: SocketCameraEnabled;
-  socketCameraDisabled: SocketCameraDisabled;
-  socketSoundCreated: SocketSoundCreated;
-  socketSoundUpdated: SocketSoundUpdated;
-  socketSoundEnabled: SocketSoundEnabled;
-  socketSoundDisabled: SocketSoundDisabled;
+  // SOCKET - SESSION
   socketSessionStarted: SocketSessionStarted;
   socketSessionAuthorized: SocketSessionAuthorized;
   socketSessionCharacterLinked: SocketSessionCharacterLinked;
@@ -78,35 +70,56 @@ export interface RPServerEvents {
   socketSessionFinished: SocketSessionFinished;
   // SOCKET - ACCOUNT
   socketAccountUsernameChanged: SocketAccountUsernameChanged;
+  // SOCKET - METRICS
   socketMetricsUpdated: SocketMetricsUpdated;
+  // SOCKET - SEGMENT DEFINITION
   socketSegmentDefinitionCreated: SocketSegmentDefinitionCreated;
   socketSegmentDefinitionUpdated: SocketSegmentDefinitionUpdated;
   socketSegmentDefinitionRemoved: SocketSegmentDefinitionRemoved;
+  // SOCKET - SEGMENT
   socketSegmentCreated: SocketSegmentCreated;
   socketSegmentRemoved: SocketSegmentRemoved;
+  // SOCKET - CAMERA
+  socketCameraCreated: SocketCameraCreated;
+  socketCameraUpdated: SocketCameraUpdated;
+  socketCameraEnabled: SocketCameraEnabled;
+  socketCameraDisabled: SocketCameraDisabled;
+  // SOCKET - SOUND
+  socketSoundCreated: SocketSoundCreated;
+  socketSoundUpdated: SocketSoundUpdated;
+  socketSoundEnabled: SocketSoundEnabled;
+  socketSoundDisabled: SocketSoundDisabled;
 
+  // SERVER
   configurationUpdated: RPConfigurationUpdated;
-
   localesUpdated: RPLocalesUpdated;
   localizationUpdated: RPLocalizationUpdated;
 
+  // CAMERA
   cameraCreated: RPCameraCreated;
   cameraUpdated: RPCameraUpdated;
 
+  // SOUND
   soundCreated: RPSoundCreated;
   soundUpdated: RPSoundUpdated;
 
+  // SESSION
   sessionStarted: RPSessionStarted;
   sessionFinished: RPSessionFinished;
   sessionAuthorized: RPSessionAuthorized;
   sessionCharacterLinked: RPSessionCharacterLinked;
   sessionUpdated: RPSessionUpdated;
 
+  // CHARACTER
   characterSync: RPCharacterSync;
 
+  // ACCOUNT
   accountUsernameChanged: RPAccountUsernameChanged;
 
+  // METRICS
   referenceMetricsUpdated: RPReferenceMetricsUpdated;
+
+  // SEGMENT
   segmentCreated: RPSegmentCreated;
   segmentRemoved: RPSegmentRemoved;
 }

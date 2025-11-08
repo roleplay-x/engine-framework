@@ -71,6 +71,7 @@ export class WorldService extends RPServerService {
     [ScreenType.Auth]: ConfigKey.AuthScreenCamera,
     [ScreenType.CharacterSelection]: ConfigKey.CharacterSelectionScreenCamera,
     [ScreenType.CharacterAppearance]: ConfigKey.CharacterAppearanceScreenCamera,
+    [ScreenType.SpawnLocationSelection]: ConfigKey.SpawnLocationSelectionScreenCamera,
   };
 
   /** Platform adapter for network communication */
@@ -321,8 +322,10 @@ export class WorldService extends RPServerService {
   public async setCameraForScreenType(playerId: PlayerId, screenType: string): Promise<boolean> {
     try {
       const configKey = this.defaultScreenTypeToCameraConfig[screenType];
-      
-      const cameraConfig = configKey ? this.getService(ConfigurationService).getConfig(configKey) : undefined;
+
+      const cameraConfig = configKey
+        ? this.getService(ConfigurationService).getConfig(configKey)
+        : undefined;
       const hookResult = await this.context.hookBus.run('screenTypeCamera', {
         cameraId: (cameraConfig?.value as ConfigSelectOptionValue)?.key,
         screenType,
@@ -370,9 +373,13 @@ export class WorldService extends RPServerService {
    * @param screenType - Optional screen type to associate with the camera
    * @returns Promise resolving to true if camera was set successfully, false otherwise
    */
-  public async setCameraForPlayer(playerId: PlayerId, cameraKey: string, screenType?: string): Promise<boolean> {
+  public async setCameraForPlayer(
+    playerId: PlayerId,
+    cameraKey: string,
+    screenType?: string,
+  ): Promise<boolean> {
     try {
-      this.logger.info(cameraKey, "to set camera for player")
+      this.logger.info(cameraKey, 'to set camera for player');
       const camera = this.getCamera(cameraKey);
 
       if (!camera) {
@@ -393,7 +400,9 @@ export class WorldService extends RPServerService {
           screenType,
         });
 
-        this.logger.info(`PedEdit camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`);
+        this.logger.info(
+          `PedEdit camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`,
+        );
         return true;
       }
 
@@ -409,7 +418,9 @@ export class WorldService extends RPServerService {
         screenType,
       });
 
-      this.logger.info(`Camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`);
+      this.logger.info(
+        `Camera activated for player ${playerId}: ${camera.id}${screenType ? ` (screen: ${screenType})` : ''}`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Failed to set camera for player ${playerId}:`, error);

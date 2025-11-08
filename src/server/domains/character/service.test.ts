@@ -14,10 +14,12 @@ import { SessionService } from '../session/service';
 import { SessionId } from '../session/models/session';
 import { WebViewService } from '../webview/service';
 import { ReferenceService } from '../reference/service';
+import { NotFoundError } from '../../core/errors';
 
 import { CharacterService } from './service';
 import { CharacterId, RPCharacter } from './models/character';
 import { CharacterFactory } from './factory';
+import { SpawnLocationId } from '../world/models/spawn-location';
 
 describe('CharacterService', () => {
   let mockLogger: MockLogger;
@@ -77,6 +79,10 @@ describe('CharacterService', () => {
 
   beforeEach(() => {
     mockLogger = new MockLogger();
+    jest.spyOn(mockLogger, 'error');
+    jest.spyOn(mockLogger, 'warn');
+    jest.spyOn(mockLogger, 'info');
+
     mockEventEmitter = new RPEventEmitter<RPServerEvents>();
     mockHookBus = new RPHookBus<RPServerHooks>();
 
@@ -433,13 +439,10 @@ describe('CharacterService', () => {
       characterService['characters'].set(testCharacterId, testCharacter);
       characterService['accountToCharacterIds'].set(testAccountId, [testCharacterId]);
 
-      mockCharacterApi.updateCharacterAppearance = jest
+      mockCharacterApi.updateCharacterAppearance = jest.fn().mockResolvedValue(updatedCharacter);
+      mockReferenceService.getReferenceSegments = jest
         .fn()
-        .mockResolvedValue(updatedCharacter);
-      mockReferenceService.getReferenceSegments = jest.fn().mockReturnValue([
-        { id: 'seg_1' },
-        { id: 'seg_2' },
-      ]);
+        .mockReturnValue([{ id: 'seg_1' }, { id: 'seg_2' }]);
     });
 
     it('should update character appearance via API', async () => {
@@ -549,6 +552,141 @@ describe('CharacterService', () => {
       characterService.markCharacterAsSpawned(testCharacterId);
 
       const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
+    });
+  });
+
+  describe('spawnCharacter', () => {
+    const testSpawnLocationId: SpawnLocationId = 'spawn_loc_123';
+    const mockSpawnLocations = [
+      {
+        id: 'spawn_loc_123',
+        name: 'Downtown Spawn',
+        description: 'Spawn in downtown',
+        position: { x: 100, y: 200, z: 30 },
+      },
+      {
+        id: 'spawn_loc_456',
+        name: 'Beach Spawn',
+        description: 'Spawn at the beach',
+        position: { x: 500, y: 600, z: 5 },
+      },
+    ];
+
+    beforeEach(() => {
+      mockCharacterApi.getCharacterSpawnLocations = jest.fn().mockResolvedValue(mockSpawnLocations);
+    });
+
+    it('should spawn character successfully when all conditions are met', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, testSpawnLocationId);
+
+      expect(mockCharacterApi.getCharacterSpawnLocations).toHaveBeenCalledWith(testCharacterId);
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
+    });
+
+    it('should return early and log error when character is not in cache', async () => {
+      await characterService.spawnCharacter('char_nonexistent', testSpawnLocationId);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Character char_nonexistent not found when spawning the character.',
+      );
+      expect(mockCharacterApi.getCharacterSpawnLocations).not.toHaveBeenCalled();
+    });
+
+    it('should return early and log warning when character is already spawned', async () => {
+      const spawnedCharacter = { ...testCharacter, spawned: true };
+      characterService['characters'].set(testCharacterId, spawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, testSpawnLocationId);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(`Character ${testCharacterId} already spawned.`);
+      expect(mockCharacterApi.getCharacterSpawnLocations).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundError when spawn location does not exist', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await expect(
+        characterService.spawnCharacter(testCharacterId, 'spawn_loc_invalid' as SpawnLocationId),
+      ).rejects.toThrow(NotFoundError);
+
+      expect(mockCharacterApi.getCharacterSpawnLocations).toHaveBeenCalledWith(testCharacterId);
+    });
+
+    it('should throw NotFoundError with correct error details', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+      const invalidSpawnLocationId = 'spawn_loc_invalid' as SpawnLocationId;
+
+      try {
+        await characterService.spawnCharacter(testCharacterId, invalidSpawnLocationId);
+        fail('Expected NotFoundError to be thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(NotFoundError);
+        expect((error as NotFoundError).key).toBe('SPAWN_LOCATION_NOT_FOUND');
+      }
+    });
+
+    it('should mark character as spawned when spawn location is valid', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, testSpawnLocationId);
+
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
+    });
+
+    it('should work with different valid spawn locations', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, 'spawn_loc_456' as SpawnLocationId);
+
+      expect(mockCharacterApi.getCharacterSpawnLocations).toHaveBeenCalledWith(testCharacterId);
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.spawned).toBe(true);
+    });
+
+    it('should fetch spawn locations from API for each spawn request', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, testSpawnLocationId);
+
+      expect(mockCharacterApi.getCharacterSpawnLocations).toHaveBeenCalledTimes(1);
+      expect(mockCharacterApi.getCharacterSpawnLocations).toHaveBeenCalledWith(testCharacterId);
+    });
+
+    it('should handle empty spawn locations list', async () => {
+      const unspawnedCharacter = { ...testCharacter, spawned: false };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+      mockCharacterApi.getCharacterSpawnLocations = jest.fn().mockResolvedValue([]);
+
+      await expect(
+        characterService.spawnCharacter(testCharacterId, testSpawnLocationId),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('should preserve other character properties when marking as spawned', async () => {
+      const unspawnedCharacter = {
+        ...testCharacter,
+        spawned: false,
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+      characterService['characters'].set(testCharacterId, unspawnedCharacter);
+
+      await characterService.spawnCharacter(testCharacterId, testSpawnLocationId);
+
+      const character = characterService['characters'].get(testCharacterId);
+      expect(character?.firstName).toBe('John');
+      expect(character?.lastName).toBe('Doe');
       expect(character?.spawned).toBe(true);
     });
   });

@@ -1,6 +1,6 @@
 {
   "name": "@roleplayx/engine-framework",
-  "version": "0.1.115",
+  "version": "0.1.116",
   "description": "RoleplayX Engine Framework",
   "main": "index.js",
   "types": "index.d.ts",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
-    "@roleplayx/engine-sdk": "^0.1.46",
+    "@roleplayx/engine-sdk": "^0.1.48",
     "@roleplayx/engine-ui-sdk": "^0.1.35",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",

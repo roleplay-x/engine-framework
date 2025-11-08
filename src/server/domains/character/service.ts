@@ -18,6 +18,8 @@ import { SessionId } from '../session/models/session';
 import { ServerPlayer } from '../../natives/entitites';
 import { IServiceContext } from '../../core/types';
 import { ReferenceService } from '../reference/service';
+import { SpawnLocationId } from '../world/models/spawn-location';
+import { NotFoundError } from '../../core/errors';
 
 import { CharacterId, RPCharacter } from './models/character';
 import { CharacterFactory } from './factory';
@@ -54,7 +56,6 @@ import { CharacterFactory } from './factory';
 export class CharacterService extends RPServerService {
   /** Cache of active characters indexed by character ID */
   private readonly characters: Map<CharacterId, RPCharacter> = new Map();
-
   /** Mapping of account IDs to their character IDs for quick lookup */
   private readonly accountToCharacterIds: Map<AccountId, CharacterId[]> = new Map();
 
@@ -255,6 +256,52 @@ export class CharacterService extends RPServerService {
       // TODO: Trigger client-side appearance update
       // player.emit('characterAppearanceUpdated', { values: character.appearance.values });
     }
+  }
+
+  /**
+   * Spawns a character at the specified spawn location.
+   *
+   * Validates that the character exists in cache, has not been spawned yet, and that
+   * the selected spawn location is valid for the character. Once validated, marks the
+   * character as spawned in the local cache.
+   *
+   * This method is typically called after the player has completed character creation
+   * (appearance setup) and selected a spawn location.
+   *
+   * @param characterId - The unique identifier of the character to spawn
+   * @param spawnLocationId - The unique identifier of the selected spawn location
+   * @returns Promise that resolves when the character is marked as spawned
+   * @throws {NotFoundError} When the spawn location is not found or invalid for the character
+   *
+   * @example
+   * ```typescript
+   * // Spawn character at a specific location
+   * await characterService.spawnCharacter('char_123', 'spawn_loc_456');
+   * console.log('Character spawned successfully');
+   * ```
+   */
+  public async spawnCharacter(characterId: CharacterId, spawnLocationId: SpawnLocationId) {
+    const character = this.characters.get(characterId);
+    if (!character) {
+      this.logger.error(`Character ${characterId} not found when spawning the character.`);
+      return;
+    }
+
+    if (character.spawned) {
+      this.logger.warn(`Character ${characterId} already spawned.`);
+      return;
+    }
+
+    const spawnLocations =
+      await this.getEngineApi(CharacterApi).getCharacterSpawnLocations(characterId);
+
+    const spawnLocation = spawnLocations.find((p) => p.id === spawnLocationId);
+    if (!spawnLocation) {
+      throw new NotFoundError('SPAWN_LOCATION_NOT_FOUND', { id: spawnLocationId });
+    }
+
+    this.markCharacterAsSpawned(characterId);
+    // TODO: spawn player
   }
 
   /**

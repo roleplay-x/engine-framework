@@ -6,6 +6,7 @@ import {
   Body,
   Controller,
   EndpointScope,
+  Post,
   Put,
   Request,
   SessionToken,
@@ -13,6 +14,7 @@ import {
 import { ConflictError } from '../../core/errors';
 
 import { CharacterService } from './service';
+import { SpawnMyCharacterApiRequest } from './models/request/spawn-my-character.api-request';
 
 /**
  * Character API Controller
@@ -83,5 +85,40 @@ export class CharacterController extends ApiController {
       request.data,
       request.base64Image,
     );
+  }
+
+  /**
+   * Spawn character at selected location
+   *
+   * Spawns the currently linked character at the selected spawn location. The session must be
+   * linked to a character (EndpointScope.CHARACTER) and the character must not have been spawned yet.
+   * The spawn location must be valid for the character.
+   *
+   * @param request - The spawn request containing the selected spawn location ID
+   * @param authRequest - The authorized request with session and character info
+   * @throws {ConflictError} When session is not linked to a character
+   * @throws {NotFoundError} When the spawn location is not found or invalid for the character
+   *
+   * @example
+   * ```typescript
+   * // Request body
+   * {
+   *   "spawnLocationId": "spawn_loc_123"
+   * }
+   * ```
+   */
+  @Post('/spawn', {
+    statusCode: 204,
+  })
+  @SessionToken(EndpointScope.CHARACTER)
+  public async spawnMyCharacter(
+    @Body() request: SpawnMyCharacterApiRequest,
+    @Request() authRequest: AuthorizedRequest,
+  ): Promise<void> {
+    if (!authRequest.characterId || !authRequest.sessionId) {
+      throw new ConflictError('SESSION_IS_NOT_LINKED_TO_A_CHARACTER', {});
+    }
+
+    await this.characterService.spawnCharacter(authRequest.characterId, request.spawnLocationId);
   }
 }
