@@ -1,4 +1,5 @@
 import { UpdateCharacterAppearanceRequest } from '@roleplayx/engine-sdk';
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
 
 import {
   ApiController,
@@ -12,6 +13,9 @@ import {
   SessionToken,
 } from '../../api';
 import { ConflictError } from '../../core/errors';
+import { SessionService } from '../session/service';
+import { WorldService } from '../world/service';
+import { WebViewService } from '../webview/service';
 
 import { CharacterService } from './service';
 import { SpawnMyCharacterApiRequest } from './models/request/spawn-my-character.api-request';
@@ -119,6 +123,19 @@ export class CharacterController extends ApiController {
       throw new ConflictError('SESSION_IS_NOT_LINKED_TO_A_CHARACTER', {});
     }
 
-    await this.characterService.spawnCharacter(authRequest.characterId, request.spawnLocationId);
+    const sessionService = this.context.getService(SessionService);
+    const player = sessionService.getPlayerBySession(authRequest.sessionId);
+
+    if (!player) {
+      throw new ConflictError('PLAYER_NOT_FOUND', {});
+    }
+
+    const worldService = this.context.getService(WorldService);
+    await worldService.releaseCameraForPlayer(player.id);
+
+    await this.characterService.spawnCharacter(authRequest.characterId, request.spawnLocationId, player.id);
+
+    const webViewService = this.context.getService(WebViewService);
+    webViewService.closeScreen(player.id, ScreenType.SpawnLocationSelection);
   }
 }

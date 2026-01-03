@@ -78,7 +78,50 @@ export class CameraService extends RPClientService<ClientTypes> {
     this.logger.info('[Camera] Setting camera for screen:', data.screenType);
     this.platformAdapter.core.shutdownLoadingScreen();
 
+    const hasValidExistingCamera = this.cameraId !== null && this.cameraId !== -1 && this.activeCamera !== null;
+    
+    if (hasValidExistingCamera) {
+      this.logger.debug('[Camera] Destroying existing camera before setting new one', {
+        existingCameraId: this.cameraId,
+        existingActiveCamera: this.activeCamera,
+        newCameraId: data.id,
+      });
+      
+      if (this.pedEditControlsInterval !== null) {
+        this.platformAdapter.core.clearTick(this.pedEditControlsInterval);
+        this.pedEditControlsInterval = null;
+      }
+      
+      this.platformAdapter.camera.renderScriptCameras(false, false, 0, true, false);
+      this.platformAdapter.camera.setCameraActive(this.cameraId!, false);
+      this.platformAdapter.camera.destroyCamera(this.cameraId!, true);
+      
+      if (this.activeCamera) {
+        this.cameraScreenMapping.delete(this.activeCamera);
+      }
+      
+      this.cameraId = null;
+      this.activeCamera = null;
+    } else if (this.activeCamera !== null) {
+      this.logger.debug('[Camera] Cleaning up invalid camera reference', {
+        existingCameraId: this.cameraId,
+        existingActiveCamera: this.activeCamera,
+      });
+      
+      if (this.activeCamera) {
+        this.cameraScreenMapping.delete(this.activeCamera);
+      }
+      this.activeCamera = null;
+      this.cameraId = null;
+    }
+
     this.cameraId = this.platformAdapter.camera.createCamera(data.type);
+    
+    if (this.cameraId === -1 || this.cameraId === null) {
+      this.logger.error('[Camera] Failed to create camera', { type: data.type });
+      return;
+    }
+    
     this.activeCamera = data.id;
 
     if (data.screenType) {
@@ -97,6 +140,8 @@ export class CameraService extends RPClientService<ClientTypes> {
       new Vector3(data.rotation.x, data.rotation.y, data.rotation.z),
     );
     this.platformAdapter.camera.setCameraFov(this.cameraId, data.fov);
+    
+    this.platformAdapter.camera.renderScriptCameras(true, true, 0, true, false);
     this.platformAdapter.camera.setCameraActive(this.cameraId, true);
 
     if (data.hideHud) {
@@ -178,8 +223,8 @@ export class CameraService extends RPClientService<ClientTypes> {
     }
 
     this.platformAdapter.camera.pointCameraAtCoord(this.cameraId, this.pedEditStartPosition);
+    this.platformAdapter.camera.renderScriptCameras(true, true, 0, true, false);
     this.platformAdapter.camera.setCameraActive(this.cameraId, true);
-    this.platformAdapter.camera.renderScriptCameras(true, false, 0, true, false);
 
     if (data.hideHud) {
       this.platformAdapter.core.displayHud(false);

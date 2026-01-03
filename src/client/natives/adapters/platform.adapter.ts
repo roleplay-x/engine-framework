@@ -4,6 +4,7 @@ import { INetworkAdapter } from './network.adapter';
 import { ICameraAdapter } from './camera.adapter';
 import { IWebViewAdapter } from './webview.adapter';
 import { IUIAdapter } from './ui.adapter';
+import { IScreenshotAdapter } from './screenshot.adapter';
 
 export abstract class ClientPlatformAdapter {
   abstract readonly core: ICoreAdapter;
@@ -12,4 +13,5 @@ export abstract class ClientPlatformAdapter {
   abstract readonly camera: ICameraAdapter;
   abstract readonly webview: IWebViewAdapter;
   abstract readonly ui: IUIAdapter;
+  abstract readonly screenshot: IScreenshotAdapter;
 }

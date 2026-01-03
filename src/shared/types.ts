@@ -28,6 +28,14 @@ export interface RPServerToClientEvents {
   cameraSet: CameraData;
   cameraPedEditSet: CameraPedEditData;
   cameraRelease: void;
+  characterScreenshotResponse: {
+    callbackId: string;
+    base64Image?: string;
+    error?: string;
+  };
+  'server:requestScreenshot': {
+    callbackId: string;
+  };
   serverConfig: {
     serverName: string;
   };
@@ -85,6 +93,22 @@ export interface RPClientToServerEvents {
     characterId?: string;
     [key: string]: any;
   };
+  characterRequestScreenshot: {
+    callbackId: string;
+  };
+  characterScreenshotCapture: {
+    callbackId: string;
+    base64Image?: string;
+    error?: string;
+  };
+  'spawn:requestCamera': {
+    cameraId?: string;
+    screenType?: string;
+  };
+  'spawn:execute': {
+    characterId: string;
+    spawnLocationId: string;
+  };
 }
 
 export interface CameraData {
@@ -112,7 +136,7 @@ export interface CameraPedEditData {
 }
 
 export interface SpawnData {
-  position: import('.').Vector3;
+  position: { x: number; y: number; z: number } | import('.').Vector3;
   heading: number;
   model?: string | number;
   skipFade?: boolean;

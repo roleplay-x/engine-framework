@@ -6,7 +6,7 @@ import {
 } from '@roleplayx/engine-sdk';
 import { ScreenType } from '@roleplayx/engine-ui-sdk';
 
-import { OnServer } from '../../core/events/decorators';
+import { OnClient, OnServer } from '../../core/events/decorators';
 import { RPSessionFinished } from '../session/events/session-finished';
 import { RPServerService } from '../../core/server-service';
 import { RPSessionCharacterLinked } from '../session/events/session-character-linked';
@@ -14,12 +14,15 @@ import { AccountId } from '../account/models/account';
 import { RPSessionAuthorized } from '../session/events/session-authorized';
 import { WebViewService } from '../webview/service';
 import { SessionService } from '../session/service';
-import { SessionId } from '../session/models/session';
+import { PlayerId, SessionId } from '../session/models/session';
 import { ServerPlayer } from '../../natives/entitites';
 import { IServiceContext } from '../../core/types';
 import { ReferenceService } from '../reference/service';
+import { WorldService } from '../world/service';
 import { SpawnLocationId } from '../world/models/spawn-location';
 import { NotFoundError } from '../../core/errors';
+import { RPClientToServerEvents, RPServerToClientEvents } from '../../../shared/types';
+import { Vector3 } from '../../../shared';
 
 import { CharacterId, RPCharacter } from './models/character';
 import { CharacterFactory } from './factory';
@@ -242,8 +245,12 @@ export class CharacterService extends RPServerService {
       // Close appearance screen
       webViewService.closeScreen(player.id, ScreenType.CharacterAppearance);
 
-      // TODO: Redirect to spawn location selector screen
-      // For now, just log
+      // Show spawn location selector screen
+      // Camera will be automatically set by WebViewService.showScreen via WorldService
+      await webViewService.showScreen(player.id, ScreenType.SpawnLocationSelection, {
+        characterId: character.id,
+      });
+      
       this.logger.info(`Character ${characterId} ready for spawn location selection`);
     } else {
       this.logger.info(
@@ -280,7 +287,7 @@ export class CharacterService extends RPServerService {
    * console.log('Character spawned successfully');
    * ```
    */
-  public async spawnCharacter(characterId: CharacterId, spawnLocationId: SpawnLocationId) {
+  public async spawnCharacter(characterId: CharacterId, spawnLocationId: SpawnLocationId, playerId?: PlayerId) {
     const character = this.characters.get(characterId);
     if (!character) {
       this.logger.error(`Character ${characterId} not found when spawning the character.`);
@@ -301,7 +308,34 @@ export class CharacterService extends RPServerService {
     }
 
     this.markCharacterAsSpawned(characterId);
-    // TODO: spawn player
+
+    if (playerId) {
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+      
+      if (player) {
+        const spawnData: RPServerToClientEvents['spawnExecute'] = {
+          position: {
+            x: spawnLocation.position.x,
+            y: spawnLocation.position.y,
+            z: spawnLocation.position.z,
+          },
+          heading: spawnLocation.position.w || 0,
+          skipFade: false,
+        };
+
+        this.logger.info(`Sending spawn execute event to player ${playerId}`, {
+          characterId,
+          spawnLocationId,
+          position: spawnData.position,
+          heading: spawnData.heading,
+        });
+
+        player.emit('spawnExecute', spawnData);
+      } else {
+        this.logger.warn(`Player ${playerId} not found when sending spawn execute event`);
+      }
+    }
   }
 
   /**
@@ -424,9 +458,18 @@ export class CharacterService extends RPServerService {
       return;
     }
 
-    // TODO: Character appearance is complete, redirect to spawn location selector
-    // For now, we'll just log that the character is ready
-    this.logger.info(`Character ${character.id} appearance is complete, ready for spawn`);
+    // Character appearance is complete, redirect to spawn location selector
+    this.logger.info(
+      `Character ${character.id} appearance is complete, redirecting to spawn location selector`,
+    );
+
+    // Close character selection screen
+    webViewService.closeScreen(player.id, ScreenType.CharacterSelection);
+
+    // Show spawn location selection screen
+    await webViewService.showScreen(player.id, ScreenType.SpawnLocationSelection, {
+      characterId: character.id,
+    });
   }
 
   /**
@@ -454,4 +497,215 @@ export class CharacterService extends RPServerService {
 
     this.accountToCharacterIds.delete(accountId);
   }
+
+  /**
+   * Handle screenshot request from client
+   * Triggers client-side screenshot capture and receives the result
+   */
+  @OnClient('characterRequestScreenshot')
+  private async onCharacterRequestScreenshot(
+    playerId: PlayerId,
+    data: { callbackId: string },
+  ): Promise<void> {
+    this.logger.info(`Screenshot request from player ${playerId}`, { callbackId: data.callbackId });
+
+    try {
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+      
+      if (!player) {
+        this.logger.error(`Player not found: ${playerId}`);
+        return;
+      }
+
+      // Trigger client-side screenshot capture
+      // Client will capture screenshot and send it back via 'characterScreenshotCapture' event
+      player.emit('server:requestScreenshot', {
+        callbackId: data.callbackId,
+      });
+      
+      this.logger.debug(`Screenshot request sent to client ${playerId}`, { callbackId: data.callbackId });
+    } catch (error) {
+      this.logger.error(`Failed to handle screenshot request for player ${playerId}:`, error);
+      
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+      
+      if (player) {
+        player.emit('characterScreenshotResponse', {
+          callbackId: data.callbackId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  }
+
+  /**
+   * Handle screenshot capture result from client
+   * Receives base64 screenshot from client and forwards it back to requesting client
+   */
+  @OnClient('characterScreenshotCapture')
+  private async onCharacterScreenshotCapture(
+    playerId: PlayerId,
+    data: { callbackId: string; base64Image?: string; error?: string },
+  ): Promise<void> {
+    this.logger.info(`Screenshot capture result from player ${playerId}`, { 
+      callbackId: data.callbackId,
+      hasImage: !!data.base64Image,
+      hasError: !!data.error,
+    });
+
+    try {
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+      
+      if (!player) {
+        this.logger.error(`Player not found: ${playerId}`);
+        return;
+      }
+
+      // Forward screenshot result back to requesting client (same client in this case)
+      player.emit('characterScreenshotResponse', {
+        callbackId: data.callbackId,
+        base64Image: data.base64Image,
+        error: data.error,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to handle screenshot capture result for player ${playerId}:`, error);
+    }
+  }
+
+  /**
+   * Handle spawn camera request from client
+   * Sets a specific camera or screen camera based on the request
+   */
+  @OnClient('spawn:requestCamera')
+  private async onSpawnRequestCamera(
+    playerId: PlayerId,
+    data: RPClientToServerEvents['spawn:requestCamera'],
+  ): Promise<void> {
+    this.logger.info(`Camera request from player ${playerId}`, { cameraId: data.cameraId, screenType: data.screenType });
+
+    try {
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+
+      if (!player) {
+        this.logger.error(`Player not found: ${playerId}`);
+        return;
+      }
+
+      const worldService = this.getService(WorldService);
+
+      if (data.cameraId) {
+        const camera = worldService.getCamera(data.cameraId);
+        if (!camera) {
+          this.logger.warn(`Camera not found: ${data.cameraId}`);
+          return;
+        }
+
+        const success = await worldService.setCameraForPlayer(
+          player.id,
+          data.cameraId,
+          data.screenType || ScreenType.SpawnLocationSelection,
+        );
+        if (!success) {
+          this.logger.warn(`Failed to set camera ${data.cameraId} for player ${playerId}`);
+        }
+      } else if (data.screenType) {
+        const success = await worldService.setCameraForScreenType(player.id, data.screenType);
+        if (!success) {
+          this.logger.warn(`Failed to set screen camera for ${data.screenType} and player ${playerId}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to handle camera request for player ${playerId}:`, error);
+    }
+  }
+
+  /**
+   * Handle character preview request from client
+   * Sends character appearance data to client for preview
+   */
+  @OnClient('characterPreview')
+  private async onCharacterPreview(
+    playerId: PlayerId,
+    data: RPClientToServerEvents['characterPreview'],
+  ): Promise<void> {
+    this.logger.info(`[CharacterService] Character preview event received from player ${playerId}`, { 
+      data,
+      characterId: data?.characterId 
+    });
+    
+    const characterId = data.characterId;
+    if (!characterId) {
+      this.logger.warn(`[CharacterService] Character preview request without characterId from player ${playerId}`);
+      return;
+    }
+
+    this.logger.info(`[CharacterService] Processing character preview request from player ${playerId}`, { characterId });
+
+    try {
+      const sessionService = this.getService(SessionService);
+      const player = sessionService.getPlayerByPlayerId(playerId);
+      const session = sessionService.getSessionByPlayer(playerId);
+
+      if (!player || !session) {
+        this.logger.error(`Player or session not found: ${playerId}`);
+        return;
+      }
+
+      // Get character data
+      if (!session.account) {
+        this.logger.warn(`Session ${session.id} has no account for character preview`);
+        return;
+      }
+
+      this.logger.debug(`[CharacterService] Getting character ${characterId} for account ${session.account.id}`);
+      const character = await this.getCharacter(characterId, session.account.id);
+      if (!character) {
+        this.logger.warn(`[CharacterService] Character ${characterId} not found for preview`);
+        return;
+      }
+
+      this.logger.debug(`[CharacterService] Character found`, {
+        characterId,
+        hasAppearance: !!character.appearance,
+        hasAppearanceValues: !!character.appearance?.values,
+        appearanceValuesCount: character.appearance?.values?.length || 0,
+      });
+
+      // Send appearance values to CHARACTER_SELECTION screen if available
+      if (character.appearance?.values && character.appearance.values.length > 0) {
+        const webViewService = this.getService(WebViewService);
+        this.logger.info(`[CharacterService] Sending appearance data to CHARACTER_SELECTION screen`, {
+          characterId,
+          valuesCount: character.appearance.values.length,
+          playerId: player.id,
+        });
+        
+        webViewService.sendMessage(
+          player.id,
+          ScreenType.CharacterSelection,
+          'characterAppearancePreview',
+          {
+            values: character.appearance.values,
+          },
+        );
+        
+        this.logger.debug(`[CharacterService] Appearance data sent to CHARACTER_SELECTION screen`, {
+          characterId,
+          valuesCount: character.appearance.values.length,
+        });
+      } else {
+        this.logger.warn(`[CharacterService] Character ${characterId} has no appearance data for preview`, {
+          hasAppearance: !!character.appearance,
+          appearanceKeys: character.appearance ? Object.keys(character.appearance) : [],
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to handle character preview for player ${playerId}:`, error);
+    }
+  }
+
 }

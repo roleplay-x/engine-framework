@@ -3,7 +3,7 @@ import { OnServer } from '../../core/events/decorators';
 import { RPServerToClientEvents } from '../../../shared/types';
 import { ClientTypes } from '../../core/types';
 import { EventService } from '../event/service';
-import { BaseScreen, CharacterSelectionScreen, CharacterAppearanceScreen } from './screens';
+import { BaseScreen, CharacterSelectionScreen, CharacterAppearanceScreen, SpawnLocationSelectionScreen, AnimationMenuScreen } from './screens';
 
 enum ScreenLifecycle {
   CREATED = 'created',
@@ -69,16 +69,28 @@ export class WebViewService extends RPClientService<ClientTypes> {
     // Get character selection screen from context
     const characterSelectionScreen = this.context.getService(CharacterSelectionScreen);
     this.screenHandlers.set(characterSelectionScreen.getScreenName(), characterSelectionScreen);
+    this.logger.info(`Registered screen handler: ${characterSelectionScreen.getScreenName()}`);
 
     // Get character appearance screen from context
     const characterAppearanceScreen = this.context.getService(CharacterAppearanceScreen);
     this.screenHandlers.set(characterAppearanceScreen.getScreenName(), characterAppearanceScreen);
+    this.logger.info(`Registered screen handler: ${characterAppearanceScreen.getScreenName()}`);
+
+    // Get spawn location selection screen from context
+    const spawnLocationSelectionScreen = this.context.getService(SpawnLocationSelectionScreen);
+    this.screenHandlers.set(spawnLocationSelectionScreen.getScreenName(), spawnLocationSelectionScreen);
+    this.logger.info(`Registered screen handler: ${spawnLocationSelectionScreen.getScreenName()}`);
+
+    // Get animation menu screen from context
+    const animationMenuScreen = this.context.getService(AnimationMenuScreen);
+    this.screenHandlers.set(animationMenuScreen.getScreenName(), animationMenuScreen);
+    this.logger.info(`Registered screen handler: ${animationMenuScreen.getScreenName()}`);
 
     // Add more screen handlers here
     // const inventoryScreen = this.context.getService(InventoryScreen);
     // this.screenHandlers.set(inventoryScreen.getScreenName(), inventoryScreen);
 
-    this.logger.info(`Registered ${this.screenHandlers.size} screen handlers`);
+    this.logger.info(`Registered ${this.screenHandlers.size} screen handlers:`, Array.from(this.screenHandlers.keys()));
   }
 
 
@@ -93,13 +105,13 @@ export class WebViewService extends RPClientService<ClientTypes> {
   }
 
   @OnServer('webviewShowScreen')
-  public onShowScreen(data: RPServerToClientEvents['webviewShowScreen']): void {
+  public async onShowScreen(data: RPServerToClientEvents['webviewShowScreen']): Promise<void> {
     if (!this.shellReady) {
       this.screenQueue.push({ type: 'show', data });
       return;
     }
 
-    this.showScreen(data.screen, data.data, data.transition);
+    await this.showScreen(data.screen, data.data, data.transition);
   }
 
   @OnServer('webviewHideScreen')
@@ -119,7 +131,21 @@ export class WebViewService extends RPClientService<ClientTypes> {
 
   @OnServer('webviewSendMessage')
   public onSendMessage(data: RPServerToClientEvents['webviewSendMessage']): void {
+    this.logger.info(`[WebViewService] Received webviewSendMessage from server`, {
+      screen: data.screen,
+      event: data.event,
+      hasData: !!data.data,
+      dataKeys: data.data ? Object.keys(data.data) : [],
+    });
+    
+    // Send to shell
     this.sendToScreen(data.screen, data.event, data.data);
+    
+    // Also trigger screen handler directly for immediate processing
+    // This ensures the event is handled even if shell hasn't processed it yet
+    this.handleScreenEvent(`${data.screen}:${data.event}`, data.data).catch((error) => {
+      this.logger.error(`[WebViewService] Error handling screen event ${data.screen}:${data.event}:`, error);
+    });
   }
 
   @OnServer('webviewSetContext')
@@ -131,10 +157,28 @@ export class WebViewService extends RPClientService<ClientTypes> {
   public showScreen(screen: string, data?: any, transition?: string): void {
     this.logger.info(`Showing screen: ${screen}`, { data, transition });
 
+    // Verify screen handler is registered
+    const handler = this.screenHandlers.get(screen);
+    if (!handler) {
+      this.logger.warn(`Screen handler not found for: ${screen}. Available screens:`, Array.from(this.screenHandlers.keys()));
+    } else {
+      this.logger.info(`Screen handler found for: ${screen}`);
+    }
+
+    // Map transition to mode for UI shell
+    // UI shell expects 'mode' parameter: 'HIDDEN' or 'SCREEN'
+    // transition can be 'hidden' or 'screen' (or other values)
+    let mode: string = 'SCREEN';
+    if (transition === 'hidden') {
+      mode = 'HIDDEN';
+    } else if (transition === 'screen' || !transition) {
+      mode = 'SCREEN';
+    }
+
     this.sendToShell('webviewShowScreen', {
       screen,
       data,
-      transition,
+      mode, // UI shell expects 'mode' not 'transition'
     });
 
     this.activeScreens.set(screen, {
@@ -143,6 +187,19 @@ export class WebViewService extends RPClientService<ClientTypes> {
       data,
       timestamp: Date.now(),
     });
+
+    // If screen is shown (not hidden), trigger onShown handler immediately
+    // This ensures focus is set even if UI shell doesn't send shown event
+    if (mode === 'SCREEN' && handler) {
+      // Call onShown handler to set focus
+      if (handler.onShown) {
+        try {
+          handler.onShown(data);
+        } catch (error) {
+          this.logger.error(`Error calling onShown for ${screen}:`, error);
+        }
+      }
+    }
   }
 
   public hideScreen(screen: string): void {
@@ -162,6 +219,11 @@ export class WebViewService extends RPClientService<ClientTypes> {
     this.context.getService(EventService).emit('webviewScreenClosed', { screen });
     
     this.activeScreens.delete(screen);
+
+    if (this.activeScreens.size === 0) {
+      this.platformAdapter.webview.setWebViewFocus(false, false);
+      this.logger.info('All screens closed, mouse/cursor disabled');
+    }
   }
 
   public updateScreen(screen: string, data: any): void {
@@ -175,6 +237,27 @@ export class WebViewService extends RPClientService<ClientTypes> {
 
   public sendToScreen(screen: string, event: string, data: any): void {
     this.sendToShell('webviewSendMessage', { screen, event, data });
+  }
+
+  /**
+   * Notify a screen with an event
+   * Sends a message to the shell using client:notifyScreen format
+   * This will be handled by the bridge and converted to webviewScreenAction
+   * 
+   * @param screen - The screen identifier
+   * @param type - The event type
+   * @param data - The event data
+   */
+  public notifyScreen(screen: string, type: string, data: any): void {
+    this.logger.debug(`Notifying screen ${screen} with event ${type}`, data);
+    
+    // Send directly to shell using client:notifyScreen format
+    // The bridge will handle this and convert it to webviewScreenAction
+    this.platformAdapter.webview.sendMessageToWebView('client:notifyScreen', {
+      screen,
+      type,
+      data,
+    });
   }
 
   /**
@@ -193,7 +276,14 @@ export class WebViewService extends RPClientService<ClientTypes> {
     }
 
     const screenId = parts[0];
-    const eventType = parts[parts.length - 1]; // Get last part as event type
+    let eventType = parts[parts.length - 1]; // Get last part as event type
+    
+    // Convert event type from SCREAMING_SNAKE_CASE or SNAKE_CASE to camelCase
+    // Handle both formats: CHARACTER_RENDER_REQUESTED -> characterRenderRequested
+    if (eventType.includes('_')) {
+      const parts = eventType.toLowerCase().split('_');
+      eventType = parts[0] + parts.slice(1).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+    }
     
     this.logger.info(`[handleScreenEvent] Screen: ${screenId}, Event: ${eventType}`, data);
 
@@ -394,6 +484,19 @@ export class WebViewService extends RPClientService<ClientTypes> {
     this.platformAdapter.webview.registerWebViewCallback('webviewScreenAction', async (data: any) => {
       const { screen, action, payload } = data;
       this.logger.info(`Screen action: ${screen} -> ${action}`, payload);
+
+      // Update lifecycle for shown/hidden actions
+      if (action === 'shown') {
+        const state = this.activeScreens.get(screen);
+        if (state) {
+          state.lifecycle = ScreenLifecycle.SHOWN;
+        }
+      } else if (action === 'hidden') {
+        const state = this.activeScreens.get(screen);
+        if (state) {
+          state.lifecycle = ScreenLifecycle.HIDDEN;
+        }
+      }
 
       // Trigger screen-specific handler
       await this.handleScreenEvent(`${screen}:${action}`, payload);

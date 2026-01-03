@@ -2,6 +2,7 @@ import { BaseScreen } from './base.screen';
 import { CameraService } from '../../camera/service';
 import { SpawnService } from '../../spawn/service';
 import { Vector3 } from '../../../../shared';
+import { BaseBlueprintConfigValue } from '@roleplayx/engine-sdk';
 
 /**
  * Character Selection Screen Handler
@@ -64,7 +65,32 @@ export class CharacterSelectionScreen extends BaseScreen {
    * Requests server to spawn the selected character for preview
    */
   async onCharacterPreview(data: any): Promise<void> {
+    // Use console.log for immediate visibility
+    console.log('[CharacterSelectionScreen] onCharacterPreview called', { 
+      data,
+      characterId: data?.characterId || data?.payload?.characterId,
+    });
+    
+    this.logger.info('[CharacterSelectionScreen] onCharacterPreview called', { 
+      data,
+      characterId: data?.characterId || data?.payload?.characterId,
+    });
+    
     const characterId = data.characterId || data.payload?.characterId;
+    const appearanceValues = data.values || data.payload?.values || data.appearanceValues || data.payload?.appearanceValues;
+    
+    console.log('[CharacterSelectionScreen] Extracted data', {
+      characterId,
+      hasAppearanceValues: Array.isArray(appearanceValues) && appearanceValues.length > 0,
+      appearanceValuesCount: Array.isArray(appearanceValues) ? appearanceValues.length : 0,
+    });
+    
+    this.logger.debug('[CharacterSelectionScreen] Extracted data', {
+      characterId,
+      hasAppearanceValues: Array.isArray(appearanceValues) && appearanceValues.length > 0,
+      appearanceValuesCount: Array.isArray(appearanceValues) ? appearanceValues.length : 0,
+    });
+    
     const cameraService = this.context.getService(CameraService);
     const spawnService = this.context.getService(SpawnService);
     
@@ -79,9 +105,121 @@ export class CharacterSelectionScreen extends BaseScreen {
     const heading = cameraData.rotation.z;
     
     await spawnService.spawnForPreview(model, position, heading);
+    
+    // Wait for model to be fully loaded before applying appearance
+    await this.waitForNextFrame();
+    await this.waitForNextFrame();
+    
+    // Apply appearance if values are provided
+    if (Array.isArray(appearanceValues) && appearanceValues.length > 0) {
+      this.logger.info('[CharacterSelectionScreen] Applying appearance for preview', { 
+        valuesCount: appearanceValues.length 
+      });
+      this.eventService.emit('character:applyAppearance', { 
+        values: appearanceValues, 
+        incremental: false 
+      });
+      
+      // Wait for appearance to be applied
+      await this.waitForNextFrame();
+      await this.waitForNextFrame();
+    } else {
+      this.logger.warn('[CharacterSelectionScreen] No appearance values provided for preview');
+    }
+    
     cameraService.refreshPedEditCamera();
     
-    this.platformAdapter.network.emitToServer('characterPreview', { characterId });
+    // Log before sending to server - use console.log for immediate visibility
+    const hasNetworkAdapter = !!this.platformAdapter?.network;
+    const hasEmitToServer = !!this.platformAdapter?.network?.emitToServer;
+    
+    console.log('[CharacterSelectionScreen] Sending characterPreview to server', { 
+      characterId,
+      hasNetworkAdapter,
+      hasEmitToServer,
+      platformAdapter: !!this.platformAdapter,
+      network: !!this.platformAdapter?.network,
+    });
+    
+    this.logger.info('[CharacterSelectionScreen] Sending characterPreview to server', { 
+      characterId,
+      hasNetworkAdapter,
+      hasEmitToServer,
+    });
+    
+    try {
+      if (!this.platformAdapter?.network?.emitToServer) {
+        console.error('[CharacterSelectionScreen] Cannot send characterPreview: network adapter or emitToServer not available', {
+          platformAdapter: !!this.platformAdapter,
+          network: !!this.platformAdapter?.network,
+          emitToServer: !!this.platformAdapter?.network?.emitToServer,
+        });
+        this.logger.error('[CharacterSelectionScreen] Cannot send characterPreview: network adapter or emitToServer not available');
+        return;
+      }
+      
+      console.log('[CharacterSelectionScreen] Calling emitToServer with', { 
+        event: 'characterPreview', 
+        data: { characterId } 
+      });
+      
+      this.platformAdapter.network.emitToServer('characterPreview', { characterId });
+      
+      console.log('[CharacterSelectionScreen] characterPreview event sent to server successfully', { characterId });
+      this.logger.info('[CharacterSelectionScreen] characterPreview event sent to server successfully', { characterId });
+    } catch (error) {
+      console.error('[CharacterSelectionScreen] Failed to send characterPreview to server', { error, characterId });
+      this.logger.error('[CharacterSelectionScreen] Failed to send characterPreview to server', { error, characterId });
+    }
+  }
+
+  /**
+   * Wait for next frame
+   */
+  private waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  }
+
+  /**
+   * Handle character appearance preview event from server
+   * This is sent when server responds to characterPreview request with appearance data
+   */
+  async onCharacterAppearancePreview(data: any): Promise<void> {
+    this.logger.info('[CharacterSelectionScreen] onCharacterAppearancePreview called', { 
+      data,
+      hasValues: !!data?.values,
+      valuesLength: Array.isArray(data?.values) ? data.values.length : 0,
+    });
+    
+    const appearanceValues = data.values || data.payload?.values || [];
+    
+    if (!Array.isArray(appearanceValues) || appearanceValues.length === 0) {
+      this.logger.warn('[CharacterSelectionScreen] No appearance values in preview event', {
+        data,
+        appearanceValues,
+      });
+      return;
+    }
+
+    this.logger.info('[CharacterSelectionScreen] Received appearance preview from server', { 
+      valuesCount: appearanceValues.length,
+      firstFewValues: appearanceValues.slice(0, 3).map(v => ({ configKey: v.configKey, type: v.type })),
+    });
+
+    // Apply appearance
+    this.logger.debug('[CharacterSelectionScreen] Emitting character:applyAppearance event');
+    this.eventService.emit('character:applyAppearance', { 
+      values: appearanceValues, 
+      incremental: false 
+    });
+    
+    // Wait for appearance to be applied
+    await this.waitForNextFrame();
+    await this.waitForNextFrame();
+    
+    this.logger.debug('[CharacterSelectionScreen] Appearance application completed');
   }
 
   /**

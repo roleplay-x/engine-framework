@@ -4,4 +4,5 @@ export * from './camera.adapter';
 export * from './network.adapter';
 export * from './webview.adapter';
 export * from './ui.adapter';
+export * from './screenshot.adapter';
 export * from './platform.adapter';

@@ -161,12 +161,22 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
     const handlers = getClientEventHandlers<RPClientToServerEvents>(this) || [];
     const handlerMethods: RPClientEventHandlerMethods<RPClientToServerEvents> = {};
     
+    const serviceName = this.constructor.name;
+    if (handlers.length > 0) {
+      this.logger.debug(`[${serviceName}] Binding ${handlers.length} client event handler(s)`, {
+        handlers: handlers.map(h => ({ event: h.event, method: h.method })),
+      });
+    }
+    
     for (const { method, event } of handlers) {
       const fn = (this as Record<string, unknown>)[method];
       if (typeof fn === 'function') {
         handlerMethods[event] = fn.bind(this);
         
         this.registerClientEventHandler(event, fn.bind(this));
+        this.logger.debug(`[${serviceName}] Registered client event handler: ${String(event)} -> ${method}`);
+      } else {
+        this.logger.warn(`[${serviceName}] Handler method ${method} not found for event ${String(event)}`);
       }
     }
 
@@ -186,8 +196,12 @@ export abstract class RPServerService<T extends ServerTypes = ServerTypes> {
     event: K,
     handler: (playerId: PlayerId, data: RPClientToServerEvents[K]) => void
   ): void {
+    const serviceName = this.constructor.name;
     if (this.context.platformAdapter?.network?.onClientEvent) {
+      this.logger.debug(`[${serviceName}] Registering client event handler with platform adapter: ${String(event)}`);
       this.context.platformAdapter.network.onClientEvent(event, handler);
+    } else {
+      this.logger.warn(`[${serviceName}] Cannot register client event handler: platform adapter or network.onClientEvent not available`);
     }
   }
 

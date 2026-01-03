@@ -50,4 +50,7 @@ export interface ICoreAdapter {
   // Tick Management
   setTick(callback: () => void): number;
   clearTick(tickId: number): void;
+
+  // Commands
+  registerCommand?(command: string, handler: (args: string[]) => void): void;
 }

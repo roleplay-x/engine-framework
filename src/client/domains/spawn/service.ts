@@ -1,9 +1,15 @@
 import { RPClientService } from '../../core/client-service';
+import { OnServer } from '../../core/events/decorators';
 import { ClientTypes } from '../../core/types';
 import { Vector3 } from '../../../shared';
 import {
   SpawnData,
+  RPServerToClientEvents,
 } from '../../../shared/types';
+import { ScreenType } from '@roleplayx/engine-ui-sdk';
+import { TemplateCategoryId } from '@roleplayx/engine-sdk';
+import { EventService } from '../event/service';
+import { WebViewService } from '../webview/service';
 
 /**
  * Interface for spawn request options
@@ -43,13 +49,90 @@ export class SpawnService extends RPClientService<ClientTypes> {
   private isSpawning = false;
   private spawnCallbacks = new Map<string, () => void>();
   private currentSpawnData: SpawnData | null = null;
+  private selectedSpawnLocationId: string | null = null;
+  private selectedSpawnLocationCameraId: string | undefined = undefined;
 
   /**
    * Initializes the spawn service.
    */
   public async init(): Promise<void> {
     this.logger.info('Initializing spawn service...');
+    this.setupEventListeners();
     await super.init();
+  }
+
+  private setupEventListeners(): void {
+  }
+
+  /**
+   * Handles spawn location preview event.
+   * Updates camera based on the selected spawn location's cameraId.
+   * If cameraId is undefined, shows screen camera (e.g., for "Character Last Position").
+   *
+   * This method is called from the spawn location selection screen when a location is selected.
+   *
+   * @param payload - Spawn location preview payload containing optional cameraId and spawnLocationId
+   */
+  public handleSpawnLocationPreview(payload: { cameraId?: string; spawnLocationId?: string }): void {
+    this.logger.info('[SpawnService] Handling spawn location preview', payload);
+
+    const cameraId = payload.cameraId;
+    const spawnLocationId = payload.spawnLocationId;
+
+    if (spawnLocationId) {
+      this.selectedSpawnLocationId = spawnLocationId;
+    }
+    this.selectedSpawnLocationCameraId = cameraId;
+
+    if (cameraId === undefined || cameraId === null) {
+      this.logger.info('[SpawnService] Showing screen camera (cameraId undefined)');
+      this.eventService.emitToServer('spawn:requestCamera', {
+        screenType: ScreenType.SpawnLocationSelection,
+      });
+    } else {
+      this.logger.info('[SpawnService] Setting camera from WorldService', { cameraId });
+      this.eventService.emitToServer('spawn:requestCamera', {
+        cameraId: cameraId as string,
+        screenType: ScreenType.SpawnLocationSelection,
+      });
+    }
+  }
+
+  @OnServer('spawnExecute')
+  public async onSpawnExecute(data: RPServerToClientEvents['spawnExecute']): Promise<void> {
+    this.logger.info('[SpawnService] Received spawn execute event from server', data);
+    
+    if (this.isSpawning) {
+      this.logger.warn('[SpawnService] Spawn already in progress, ignoring new spawn request');
+      return;
+    }
+
+    this.isSpawning = true;
+    
+    const position = new Vector3(data.position.x, data.position.y, data.position.z);
+    const spawnData: SpawnData = {
+      position,
+      heading: data.heading,
+      model: data.model,
+      skipFade: data.skipFade,
+    };
+    
+    this.currentSpawnData = spawnData;
+    
+    try {
+      await this.executeSpawn(spawnData);
+      
+      this.spawnCallbacks.forEach((callback) => {
+        try {
+          callback();
+        } catch (error) {
+          this.logger.error('[SpawnService] Error in spawn callback:', error);
+        }
+      });
+    } finally {
+      this.isSpawning = false;
+      this.currentSpawnData = null;
+    }
   }
 
   /**
@@ -90,7 +173,9 @@ export class SpawnService extends RPClientService<ClientTypes> {
 
       const playerPed = this.platformAdapter.player.getPlayerPed();
       
-      this.platformAdapter.player.setEntityPosition(playerPed, data.position, false);
+      const position = new Vector3(data.position.x, data.position.y, data.position.z);
+      
+      this.platformAdapter.player.setEntityPosition(playerPed, position, false);
       this.platformAdapter.player.setEntityHeading(playerPed, data.heading);
       this.platformAdapter.player.setEntityVisible(playerPed, true);
 
@@ -188,12 +273,39 @@ export class SpawnService extends RPClientService<ClientTypes> {
   }
 
   /**
+   * Gets the selected spawn location ID.
+   *
+   * @returns The selected spawn location ID or null
+   */
+  public getSelectedSpawnLocationId(): string | null {
+    return this.selectedSpawnLocationId;
+  }
+
+  /**
+   * Gets the selected spawn location camera ID.
+   *
+   * @returns The selected spawn location camera ID or undefined
+   */
+  public getSelectedSpawnLocationCameraId(): string | undefined {
+    return this.selectedSpawnLocationCameraId;
+  }
+
+  /**
+   * Clears the selected spawn location information.
+   */
+  public clearSelectedSpawnLocation(): void {
+    this.selectedSpawnLocationId = null;
+    this.selectedSpawnLocationCameraId = undefined;
+  }
+
+  /**
    * Disposes the spawn service.
    */
   public async dispose(): Promise<void> {
     this.logger.info('Disposing spawn service...');
 
     this.clearSpawnCallbacks();
+    this.clearSelectedSpawnLocation();
     this.isSpawning = false;
     this.currentSpawnData = null;
 

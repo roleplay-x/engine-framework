@@ -13,7 +13,8 @@ import { CameraService } from '../domains/camera/service';
 import { WebViewService } from '../domains/webview/service';
 import { UIService } from '../domains/ui/service';
 import { CharacterService } from '../domains/character/service';
-import { CharacterSelectionScreen, CharacterAppearanceScreen } from '../domains/webview/screens';
+import { AnimationService } from '../domains/animation/service';
+import { CharacterSelectionScreen, CharacterAppearanceScreen, AnimationMenuScreen } from '../domains/webview/screens';
 
 /** Configuration options for creating a roleplay client instance */
 export interface RPClientOptions {
@@ -116,6 +117,7 @@ export class RPClient {
     this.context.addService(WebViewService);
     this.context.addService(UIService);
     this.context.addService(CharacterService);
+    this.context.addService(AnimationService);
   }
 
   /**
@@ -125,6 +127,7 @@ export class RPClient {
   private registerScreenServices(): void {
     this.context.addService(CharacterSelectionScreen);
     this.context.addService(CharacterAppearanceScreen);
+    this.context.addService(AnimationMenuScreen);
   }
 
   /**
